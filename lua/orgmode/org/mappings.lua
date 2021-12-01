@@ -303,6 +303,21 @@ function OrgMappings:_todo_change_state(direction)
     return
   end
   item = Files.get_closest_headline()
+
+  local state_change = string.format(
+    '- State "%s" from "%s" [%s]',
+    item.todo_keyword.value,
+    old_state,
+    Date.now():to_string()
+  )
+  local logging_line = item.line_number
+  if item:has_planning() then
+    logging_line = logging_line + 1
+  end
+  local indent = string.rep(' ', item.level + 1)
+  vim.fn.append(logging_line, indent .. state_change)
+  local repeater_dates = item:get_repeater_dates()
+
   if not item:is_done() and not was_done then
     return item
   end
@@ -324,12 +339,6 @@ function OrgMappings:_todo_change_state(direction)
   end
 
   self:_change_todo_state('reset')
-  local state_change = string.format(
-    '- State "%s" from "%s" [%s]',
-    item.todo_keyword.value,
-    old_state,
-    Date.now():to_string()
-  )
 
   local data = item:add_properties({ LAST_REPEAT = '[' .. Date.now():to_string() .. ']' })
   if data.is_new then
