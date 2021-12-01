@@ -339,8 +339,6 @@ function OrgMappings:_todo_change_state(direction)
   end
 
   self:_change_todo_state('reset')
-
-  local data = item:add_properties({ LAST_REPEAT = '[' .. Date.now():to_string() .. ']' })
 end
 
 function OrgMappings:do_promote(whole_subtree)
