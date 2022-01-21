@@ -14,9 +14,9 @@
 
 </div>
 
-Compared to the original orgmode plugin by kristijanhusak, I added a state
-change logging that takes place every time the state of a TODO changes, not
-only when it is a repeating task.
+**NOTE**: Compared to the original orgmode plugin by kristijanhusak, I added a
+state change logging that takes place every time the state of a TODO changes,
+not only when it is a repeating task.
 
 
 ## Installation
