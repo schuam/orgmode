@@ -6,64 +6,47 @@ endif
 
 lua require('orgmode.colors.highlights').define_highlights()
 lua require('orgmode.org.syntax').add_todo_keywords_to_spellgood()
-let s:concealends = ''
-let s:conceal = luaeval('require("orgmode.config").org_hide_emphasis_markers')
-if s:conceal
-  let s:concealends = ' concealends'
-endif
-
-function s:markup_start(marker, ...) abort
-  let items = ['\s', '(', '-', "'", '"', '{']
-  let alternative = get(a:, 1, '')
-  if a:0 == 0
-    let items += [a:marker, '^']
-  endif
-  return '#\('.join(items, '\|').'\)\zs'.a:marker.alternative.'#'
-endfunction
-
-function s:markup_end(marker) abort
-  let items = ['$', '\s', ')', '-', '\}', "'", '"', ':', ';', '!', '\\', '\[', ',', '\.', '?'] + [a:marker]
-  return '#'.a:marker.'\ze\('.join(items, '\|').'\)#'
-endfunction
-
-exe 'syntax region org_bold      matchgroup=org_bold_delimiter       start='.s:markup_start('\*', '\|^\*\ze[^ \*]').' end='.s:markup_end('\*').' keepend oneline contains=@Spell' . s:concealends
-exe 'syntax region org_italic    matchgroup=org_italic_delimiter     start='.s:markup_start('\/').'    end='.s:markup_end('\/').' keepend oneline contains=@Spell' . s:concealends
-exe 'syntax region org_underline matchgroup=org_underline_delimiter  start='.s:markup_start('_').'     end='.s:markup_end('_').'  keepend oneline contains=@Spell' . s:concealends
-exe 'syntax region org_code      matchgroup=org_code_delimiter       start='.s:markup_start('\~').'    end='.s:markup_end('\~').' keepend oneline contains=@Spell' . s:concealends
-exe 'syntax region org_verbatim  matchgroup=org_verbatim_delimiter   start='.s:markup_start('=').'     end='.s:markup_end('=').'  keepend oneline contains=@Spell' . s:concealends
-exe 'syntax region org_strike    matchgroup=org_strike_delimiter     start='.s:markup_start('+').'     end='.s:markup_end('+').'  keepend oneline contains=@Spell' . s:concealends
-
-hi link org_bold_delimiter org_bold
-hi link org_italic_delimiter org_italic
-hi link org_underline_delimiter org_underline
-hi link org_code_delimiter org_code
-hi link org_verbatim_delimiter org_verbatim
-hi link org_strike_delimiter org_strike
-
-hi def org_bold      term=bold      cterm=bold      gui=bold
-hi def org_italic    term=italic    cterm=italic    gui=italic
-hi def org_underline term=underline cterm=underline gui=underline
-hi def org_strike    term=strikethrough cterm=strikethrough gui=strikethrough
-hi def link org_code     String
-hi def link org_verbatim String
-
 let s:ts_highlight = luaeval('require("orgmode.config"):ts_highlights_enabled()')
 if !s:ts_highlight
-    runtime syntax/org_legacy.vim
+  runtime syntax/org_legacy.vim
 endif
 
-" Hyperlinks: {{{1
-syntax match org_hyperlink	"\[\{2}[^][]*\(\]\[[^][]*\)\?\]\{2}" contains=org_hyperlinkBracketsLeft,org_hyperlinkURL,org_hyperlinkBracketsRight
-syntax match org_hyperlinkBracketsLeft	contained "\[\{2}"     conceal
-syntax match org_hyperlinkURL				    contained "[^][]*\]\[" conceal
-syntax match org_hyperlinkBracketsRight	contained "\]\{2}"     conceal
-hi def link org_hyperlink Underlined
+" Timestamps: {{{1
+"<2003-09-16>
+syn match org_timestamp /\(<\d\d\d\d-\d\d-\d\d\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?>\)/
+"<2003-09-16 12:00>
+syn match org_timestamp /\(<\d\d\d\d-\d\d-\d\d \d\d:\d\d\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?>\)/
+"<2003-09-16 Tue>
+"<2003-09-16 Sáb>
+syn match org_timestamp /\(<\d\d\d\d-\d\d-\d\d \k\k\k\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?>\)/
+"<2003-09-16 Tue 12:00>
+syn match org_timestamp /\(<\d\d\d\d-\d\d-\d\d \k\k\k \d\d:\d\d\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?>\)/
+"<2003-09-16 Tue 12:00-12:30>
+syn match org_timestamp /\(<\d\d\d\d-\d\d-\d\d \k\k\k \d\d:\d\d-\d\d:\d\d\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?>\)/
 
-hi org_hide_leading_stars ctermfg=0 guifg=bg
+"<2003-09-16 Tue>--<2003-09-16 Tue>
+syn match org_timestamp /\(<\d\d\d\d-\d\d-\d\d \k\k\k>--<\d\d\d\d-\d\d-\d\d \k\k\k>\)/
+"<2003-09-16 Tue 12:00>--<2003-09-16 Tue 12:00>
+syn match org_timestamp /\(<\d\d\d\d-\d\d-\d\d \k\k\k \d\d:\d\d>--<\d\d\d\d-\d\d-\d\d \k\k\k \d\d:\d\d>\)/
 
-" Tables
-syntax match org_table_hrule /^\s*|[-+]*|\s*$/
-hi org_table_hrule gui=NONE cterm=NONE
+syn match org_timestamp /\(<%%(diary-float.\+>\)/
+
+"[2003-09-16]
+syn match org_timestamp_inactive /\(\[\d\d\d\d-\d\d-\d\d\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?]\)/
+"[2003-09-16 Tue]
+syn match org_timestamp_inactive /\(\[\d\d\d\d-\d\d-\d\d \k\k\k\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?\]\)/
+"[2003-09-16 Tue 12:00]
+syn match org_timestamp_inactive /\(\[\d\d\d\d-\d\d-\d\d \k\k\k \d\d:\d\d\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?\(\s\+[+\-\.]\?[+\-]\d\+[hdmwy]\)\?\]\)/
+
+"[2003-09-16 Tue]--[2003-09-16 Tue]
+syn match org_timestamp_inactive /\(\[\d\d\d\d-\d\d-\d\d \k\k\k\]--\[\d\d\d\d-\d\d-\d\d \k\k\k\]\)/
+"[2003-09-16 Tue 12:00]--[2003-09-16 Tue 12:00]
+syn match org_timestamp_inactive /\(\[\d\d\d\d-\d\d-\d\d \k\k\k \d\d:\d\d\]--\[\d\d\d\d-\d\d-\d\d \k\k\k \d\d:\d\d\]\)/
+
+syn match org_timestamp_inactive /\(\[%%(diary-float.\+\]\)/
+
+hi def link org_timestamp PreProc
+hi def link org_timestamp_inactive Comment
 
 syntax spell toplevel
 

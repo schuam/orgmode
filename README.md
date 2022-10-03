@@ -8,7 +8,7 @@
 
   <a href="/LICENSE">![License](https://img.shields.io/badge/license-MIT-brightgreen?style=flat-square)</a><a href="https://ko-fi.com/kristijanhusak"> ![Kofi](https://img.shields.io/badge/support-kofi-00b9fe?style=flat-square&logo=kofi)</a>
 
-  Orgmode clone written in Lua for Neovim 0.5.
+  Orgmode clone written in Lua for Neovim 0.7.
 
   [Installation](#installation) | [Setup](#setup) | [Troubleshoot](#troubleshoot) |  [Gifs](#gifs) | [Docs](/DOCS.md) | [Tree-sitter info](#tree-sitter-info) | [Plugins](#plugins) | [Development](#development) | [Kudos](#thanks-to)
 
@@ -76,22 +76,15 @@ call dein#add('nvim-orgmode/orgmode')
 ```lua
 -- init.lua
 
-local parser_config = require "nvim-treesitter.parsers".get_parser_configs()
-parser_config.org = {
-  install_info = {
-    url = 'https://github.com/milisims/tree-sitter-org',
-    revision = 'main',
-    files = {'src/parser.c', 'src/scanner.cc'},
-  },
-  filetype = 'org',
-}
+-- Load custom tree-sitter grammar for org filetype
+require('orgmode').setup_ts_grammar()
 
+-- Tree-sitter configuration
 require'nvim-treesitter.configs'.setup {
   -- If TS highlights are not enabled at all, or disabled via `disable` prop, highlighting will fallback to default Vim syntax highlighting
   highlight = {
     enable = true,
-    disable = {'org'}, -- Remove this to use TS highlighter for some of the highlights (Experimental)
-    additional_vim_regex_highlighting = {'org'}, -- Required since TS highlighter doesn't support all syntax features (conceal)
+    additional_vim_regex_highlighting = {'org'}, -- Required for spellcheck, some LaTex highlights and code block highlights that do not have ts grammar
   },
   ensure_installed = {'org'}, -- Or run :TSUpdate org
 }
@@ -106,22 +99,16 @@ Or if you are using `init.vim`:
 ```vim
 " init.vim
 lua << EOF
-local parser_config = require "nvim-treesitter.parsers".get_parser_configs()
-parser_config.org = {
-  install_info = {
-    url = 'https://github.com/milisims/tree-sitter-org',
-    revision = 'main',
-    files = {'src/parser.c', 'src/scanner.cc'},
-  },
-  filetype = 'org',
-}
 
+-- Load custom tree-sitter grammar for org filetype
+require('orgmode').setup_ts_grammar()
+
+-- Tree-sitter configuration
 require'nvim-treesitter.configs'.setup {
   -- If TS highlights are not enabled at all, or disabled via `disable` prop, highlighting will fallback to default Vim syntax highlighting
   highlight = {
     enable = true,
-    disable = {'org'}, -- Remove this to use TS highlighter for some of the highlights (Experimental)
-    additional_vim_regex_highlighting = {'org'}, -- Required since TS highlighter doesn't support all syntax features (conceal)
+    additional_vim_regex_highlighting = {'org'}, -- Required for spellcheck, some LaTex highlights and code block highlights that do not have ts grammar
   },
   ensure_installed = {'org'}, -- Or run :TSUpdate org
 }
@@ -136,6 +123,8 @@ EOF
 * **Open agenda prompt**: <kbd>\<Leader\>oa</kbd>
 * **Open capture prompt**: <kbd>\<Leader\>oc</kbd>
 * In any orgmode buffer press <kbd>g?</kbd> for help
+
+If you are new to Orgmode, see [Getting started](/DOCS.md#getting-started-with-orgmode) section in Docs.
 
 ### Completion
 If you use [nvim-compe](https://github.com/hrsh7th/nvim-compe) and want
@@ -204,17 +193,17 @@ Highlights are experimental and partially supported.
 * Headline markup highlighting (https://github.com/nvim-orgmode/orgmode/issues/67)
 
 #### Troubleshoot
-**Folding is not working**<br />
+##### Folding is not working
 Make sure you are not overriding foldexpr in Org buffers with [nvim-treesitter folding](https://github.com/nvim-treesitter/nvim-treesitter#folding)
 
-**Indentation is not working**<br />
+##### Indentation is not working
 Make sure you are not overriding indentexpr in Org buffers with [nvim-treesitter indentation](https://github.com/nvim-treesitter/nvim-treesitter#indentation)
 
-**I get `treesitter/query.lua` errors when opening agenda/capture prompt or org files**<br />
+##### I get `treesitter/query.lua` errors when opening agenda/capture prompt or org files
 Make sure you are using latest changes from [tree-sitter-org](https://github.com/milisims/tree-sitter-org) grammar.<br />
 by running `:TSUpdate org` and restarting the editor.
 
-**Dates are not in English**<br />
+##### Dates are not in English
 Dates are generated with Lua native date support, and it reads your current locale when creating them.<br />
 To use different locale you can add this to your `init.lua`:
 ```lua
@@ -226,6 +215,36 @@ language en_US.utf8
 ```
 Just make sure you have `en_US` locale installed on your system. To see what you have available on the system you can
 start the command `:language ` and press `<TAB>` to autocomplete possible options.
+
+##### Links are not concealed
+Links are concealed with Vim's conceal feature (see `:help conceal`). To enable concealing, add this to your `init.lua`:
+```lua
+vim.opt.conceallevel = 2
+vim.opt.concealcursor = 'nc'
+```
+
+Or if you are using `init.vim`:
+
+```vim
+set conceallevel=2
+set concealcursor=nc
+```
+
+##### Jumping to file path is not working for paths with forward slash
+If you are using Windows, paths are by default written with backslashes.
+To use forward slashes, you must enable `shellslash` option (see `:help 'shellslash'`).
+
+```lua
+vim.opt.shellslash = true
+```
+
+Or if you are using `init.vim`:
+
+```vim
+set shellslash
+```
+
+More info on issue [#281](https://github.com/nvim-orgmode/orgmode/issues/281#issuecomment-1120200775)
 
 ### Features (TL;DR):
 * Agenda view
@@ -284,6 +303,7 @@ start the command `:language ` and press `<TAB>` to autocomplete possible option
   * Change headline TODO state: forward<kbd>cit</kbd> or backward<kbd>ciT</kbd>
   * Open hyperlink or date under cursor: <kbd>\<Leader\>oo</kbd>
   * Toggle checkbox: <kbd>\<C-space\></kbd>
+  * Toggle current line to headline and vice versa: <kbd>\<Leader\>o*</kbd>
   * Toggle folding of current headline: <kbd>\<TAB\></kbd>
   * Toggle folding in whole file: <kbd>\<S-TAB\></kbd>
   * Archive headline: <kbd>\<Leader\>o$</kbd>
@@ -324,12 +344,16 @@ issue.
 ## Development
 
 ### Tests
- To run tests, [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) is necessary. Once installed, run:
+ To run tests, [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) and [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) must be present in the nvim-orgmode directory:
 ```
+git clone https://github.com/nvim-treesitter/nvim-treesitter
+git clone https://github.com/nvim-lua/plenary.nvim
 make test
 ```
 
 ### Documentation
+Hosted documentation is on: [https://nvim-orgmode.github.io/](https://nvim-orgmode.github.io/)
+
 Vim documentation is auto generated from [DOCS.md](DOCS.md) file with [md2vim](https://github.com/FooSoft/md2vim).
 
 ### Formatting

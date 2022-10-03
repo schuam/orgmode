@@ -48,7 +48,7 @@ function Section:new(data)
   section.todo_keyword = { value = '', type = '', node = data.todo_keyword_node }
   section.priority = data.priority
   section.title = data.title
-  section.category = data.properties.items.category or data.root.category
+  section.category = data.properties.items.category or (data.parent and data.parent.category) or data.root.category
   section.file = data.root.filename or ''
   section.dates = data.dates or {}
   section.properties = data.properties
@@ -88,32 +88,41 @@ function Section.from_node(section_node, file, parent)
 
   for child in section_node:iter_children() do
     if child:type() == 'plan' then
-      for _, plan_date in ipairs(ts_utils.get_named_children(child)) do
-        local type = plan_date:type():upper()
-        local node = plan_date:child(0)
-        if type == 'TIMESTAMP' then
-          type = 'NONE'
-          node = plan_date
+      for entry in child:iter_children() do
+        if entry:type() == 'entry' then
+          local first_node = entry:named_child(0)
+          local first_node_text = file:get_node_text(first_node)
+          if entry:named_child_count() == 1 and first_node:type() == 'timestamp' then
+            utils.concat(
+              data.dates,
+              Date.from_org_date(first_node_text, {
+                range = Range.from_node(first_node),
+              })
+            )
+          end
+          if entry:named_child_count() == 2 and first_node:type() == 'entry_name' then
+            local valid_plan_types = { 'SCHEDULED', 'DEADLINE', 'CLOSED' }
+            local type = 'NONE'
+            if vim.tbl_contains(valid_plan_types, first_node_text:upper()) then
+              type = first_node_text
+            end
+            local timestamp = file:get_node_text(entry:named_child(1))
+            utils.concat(
+              data.dates,
+              Date.from_org_date(timestamp, {
+                range = Range.from_node(entry:named_child(1)),
+                type = type,
+              })
+            )
+          end
         end
-        local date = file:get_node_text(node)
-        utils.concat(
-          data.dates,
-          Date.from_org_date(date, {
-            type = type,
-            range = Range.from_node(node),
-          })
-        )
       end
     end
     if child:type() == 'body' then
-      local dates = file:get_ts_matches('(timestamp) @timestamp', child)
-      for _, date in ipairs(dates) do
-        utils.concat(
-          data.dates,
-          Date.from_org_date(date.timestamp.text, {
-            range = Range.from_node(date.timestamp.node),
-          })
-        )
+      local start_line = child:range()
+      local lines = file:get_node_text_list(child)
+      for i, line in ipairs(lines) do
+        utils.concat(data.dates, Date.parse_all_from_line(line, start_line + i))
       end
       local drawers = file:get_ts_matches('(drawer) @drawer', child)
       for _, drawer_item in ipairs(drawers) do
@@ -143,19 +152,23 @@ function Section.from_node(section_node, file, parent)
 
     if child:type() == 'headline' then
       data.line = file:get_node_text(child)
+      utils.concat(data.dates, Date.parse_all_from_line(data.line, data.range.start_line))
       data.level = file:get_node_text(child:child(0)):len()
       for headline_node in child:iter_children() do
         if headline_node:type() == 'item' then
           data.title = file:get_node_text(headline_node)
           data.todo_keyword_node = headline_node:child(0)
         end
-        if headline_node:type() == 'tag' then
-          local tag = file:get_node_text(headline_node)
-          if not vim.tbl_contains(data.tags, tag) then
-            table.insert(data.tags, tag)
-          end
-          if not vim.tbl_contains(data.own_tags, tag) then
-            table.insert(data.own_tags, tag)
+        if headline_node:type() == 'tag_list' then
+          local tags = ts_utils.get_named_children(headline_node)
+          for _, tag_node in ipairs(tags) do
+            local tag = file:get_node_text(tag_node)
+            if not vim.tbl_contains(data.tags, tag) then
+              table.insert(data.tags, tag)
+            end
+            if not vim.tbl_contains(data.own_tags, tag) then
+              table.insert(data.own_tags, tag)
+            end
           end
         end
       end
@@ -188,44 +201,6 @@ end
 ---@return boolean
 function Section:has_priority()
   return vim.trim(self.priority or '') ~= ''
-end
-
----@param priority string
-function Section:set_priority(priority)
-  if not priority then
-    return
-  end
-
-  local linenr = self.range.start_line
-  local stars = string.rep('%*', self.level)
-  local static_state = self.todo_keyword.value
-
-  local changing_state = ''
-  if self.priority ~= '' then
-    changing_state = '%[#' .. self.priority .. '%]%s+'
-  end
-
-  local new_state = ''
-  if vim.trim(priority) ~= '' then
-    new_state = '%[#' .. priority .. '%] '
-  end
-
-  local existing_line = vim.api.nvim_call_function('getline', { linenr })
-  local new_line = existing_line:gsub(
-    '^' .. stars .. '%s+' .. static_state .. (static_state ~= '' and '%s+' or '') .. changing_state,
-    stars .. (static_state ~= '' and ' ' or '') .. static_state .. ' ' .. new_state
-  )
-
-  if existing_line == new_line then
-    return
-  end
-
-  vim.api.nvim_call_function('setline', {
-    linenr,
-    new_line,
-  })
-
-  self.priority = vim.trim(priority)
 end
 
 ---@return number
@@ -376,10 +351,7 @@ function Section:add_properties(properties)
   end
 
   local properties_line = self:has_planning() and self.range.start_line + 1 or self.range.start_line
-  local indent = ''
-  if config.org_indent_mode == 'indent' then
-    indent = string.rep(' ', self.level + 1)
-  end
+  local indent = config:get_indent(self.level + 1)
   local content = { string.format('%s:PROPERTIES:', indent) }
 
   for name, val in pairs(properties) do
@@ -442,27 +414,40 @@ function Section:get_next_headline_same_level()
 end
 
 ---@param amount number
----@param demote_child_sections boolean
-function Section:demote(amount, demote_child_sections)
+---@param demote_child_sections? boolean
+---@param dryRun? boolean
+function Section:demote(amount, demote_child_sections, dryRun)
   amount = amount or 1
   demote_child_sections = demote_child_sections or false
-  vim.api.nvim_call_function('setline', { self.range.start_line, string.rep('*', amount) .. self.line })
-  if config.org_indent_mode == 'indent' then
-    local contents = self.root:get_node_text_list(self.node)
-    for i, content in ipairs(contents) do
-      if i > 1 then
-        if content:match('^%*+') then
-          break
-        end
-        vim.api.nvim_call_function('setline', { self.range.start_line + i - 1, string.rep(' ', amount) .. content })
+  local should_indent = config.org_indent_mode == 'indent'
+  local lines = {}
+  local headline_line = string.rep('*', amount) .. self.line
+  table.insert(lines, headline_line)
+  if not dryRun then
+    vim.api.nvim_call_function('setline', { self.range.start_line, headline_line })
+  end
+  local contents = self.root:get_node_text_list(self.node)
+  for i, content in ipairs(contents) do
+    if i > 1 then
+      if content:match('^%*+') then
+        break
+      end
+      local content_line = content
+      if should_indent then
+        content_line = string.rep(' ', amount) .. content
+      end
+      table.insert(lines, content_line)
+      if not dryRun and should_indent then
+        vim.api.nvim_call_function('setline', { self.range.start_line + i - 1, content_line })
       end
     end
   end
   if demote_child_sections then
     for _, section in ipairs(self.sections) do
-      section:demote(amount, true)
+      utils.concat(lines, section:demote(amount, true, dryRun))
     end
   end
+  return lines
 end
 
 ---@param amount number
@@ -495,7 +480,7 @@ function Section:promote(amount, promote_child_sections)
 end
 
 function Section:add_closed_date()
-  local closed_date = self:_get_closed_date()
+  local closed_date = self:get_closed_date()
   if closed_date then
     return nil
   end
@@ -521,7 +506,7 @@ function Section:add_deadline_date(date)
 end
 
 function Section:remove_closed_date()
-  local closed_date = self:_get_closed_date()
+  local closed_date = self:get_closed_date()
   if not closed_date then
     return nil
   end
@@ -576,7 +561,7 @@ function Section:cancel_active_clock()
 end
 
 ---@return Date
-function Section:_get_closed_date()
+function Section:get_closed_date()
   return vim.tbl_filter(function(date)
     return date:is_closed()
   end, self.dates)[1]
@@ -584,8 +569,8 @@ end
 
 ---@private
 function Section:_parse()
-  self:_parse_todo_keyword()
   self.priority = self.line:match(self.todo_keyword.value .. '%s+%[#([A-Z0-9])%]') or ''
+  self:_parse_todo_keyword()
 end
 
 ---@private
@@ -603,12 +588,20 @@ function Section:_parse_todo_keyword()
   end
 
   local keyword_info = todo_keywords.KEYS[keyword]
-  self.title = self.title:gsub('^' .. keyword .. '%s*', '')
+  self.title = self.title:gsub('^' .. vim.pesc(keyword) .. '%s*', '')
   self.todo_keyword = {
     value = keyword,
     type = keyword_info.type,
     range = Range.from_node(self.todo_keyword.node),
   }
+end
+
+function Section:get_title()
+  if not self:has_priority() then
+    return self.title
+  end
+  local title = self.title:gsub('^%[#([A-Z0-9])%]%s*', '')
+  return title
 end
 
 function Section:_update_date(date, new_date)
@@ -619,12 +612,8 @@ function Section:_update_date(date, new_date)
   })
   local line = vim.api.nvim_call_function('getline', { date.range.start_line })
   local view = vim.fn.winsaveview()
-  local new_line = string.format(
-    '%s%s%s',
-    line:sub(1, date.range.start_col),
-    date:to_string(),
-    line:sub(date.range.end_col)
-  )
+  local new_line =
+    string.format('%s%s%s', line:sub(1, date.range.start_col), date:to_string(), line:sub(date.range.end_col))
   vim.api.nvim_call_function('setline', {
     date.range.start_line,
     new_line,
@@ -635,7 +624,7 @@ end
 
 ---@param date Date
 ---@param type string
----@param active boolean
+---@param active? boolean
 ---@return string
 function Section:_add_planning_date(date, type, active)
   local date_string = date:to_wrapped_string(active)
@@ -647,10 +636,7 @@ function Section:_add_planning_date(date, type, active)
     })
   end
 
-  local indent = ''
-  if config.org_indent_mode == 'indent' then
-    indent = string.rep(' ', self.level + 1)
-  end
+  local indent = config:get_indent(self.level + 1)
   return vim.api.nvim_call_function('append', {
     self.range.start_line,
     string.format('%s%s: %s', indent, type, date_string),

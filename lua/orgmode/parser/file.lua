@@ -16,6 +16,7 @@ local utils = require('orgmode.utils')
 ---@field sections_by_line table<number, Section>
 ---@field source_code_filetypes string[]
 ---@field is_archive_file boolean
+---@field archive_location string
 ---@field clocked_headline Section
 ---@field tags string[]
 local File = {}
@@ -43,16 +44,21 @@ end
 
 function File:_parse()
   self:_parse_source_code_filetypes()
-  self:_parse_sections_and_root_directives()
+  self:_parse_directives()
+  self:_parse_sections()
 end
 
 function File:get_errors()
-  local has_error = self.tree:root():has_error()
-  if not has_error then
+  if not self:has_errors() then
     return nil
   end
 
   return self:get_ts_matches('(ERROR) @err')
+end
+
+---@return boolean
+function File:has_errors()
+  return self.tree:root():has_error()
 end
 
 function File:convert_to_file_node(node)
@@ -80,10 +86,6 @@ function File:get_opened_headlines()
   local headlines = vim.tbl_filter(function(item)
     return not item:is_archived()
   end, self.sections)
-
-  table.sort(headlines, function(a, b)
-    return a:get_priority_sort_value() > b:get_priority_sort_value()
-  end)
 
   return headlines
 end
@@ -146,9 +148,9 @@ function File.load(path, callback)
 end
 
 ---@param content string|table
----@param category string
----@param filename string
----@param is_archive_file boolean
+---@param category? string
+---@param filename? string
+---@param is_archive_file? boolean
 ---@return File|nil
 function File.from_content(content, category, filename, is_archive_file)
   local str_content = table.concat(content, '\n')
@@ -200,9 +202,13 @@ end
 
 ---@param title string
 ---@return Section[]
-function File:find_headlines_by_title(title)
+function File:find_headlines_by_title(title, exact)
   return vim.tbl_filter(function(item)
-    return item.title:lower():match('^' .. vim.pesc(title:lower()))
+    local pattern = '^' .. vim.pesc(title:lower())
+    if exact then
+      pattern = pattern .. '$'
+    end
+    return item:get_title():lower():match(pattern)
   end, self.sections)
 end
 
@@ -236,8 +242,8 @@ end
 
 ---@param title string
 ---@return Section
-function File:find_headline_by_title(title)
-  local headlines = self:find_headlines_by_title(title)
+function File:find_headline_by_title(title, exact)
+  local headlines = self:find_headlines_by_title(title, exact)
   return headlines[1]
 end
 
@@ -253,9 +259,15 @@ function File:get_opened_unfinished_headlines()
 end
 
 ---@return userdata
-function File:get_node_at_cursor()
-  local cursor = vim.api.nvim_win_get_cursor(0)
+function File:get_node_at_cursor(cursor)
+  cursor = cursor or vim.api.nvim_win_get_cursor(0)
   local cursor_range = { cursor[1] - 1, cursor[2] }
+  -- Parsing a node from the last empty line in a file causes failure with parsing
+  -- because the line doesn't properly belong to any node.
+  -- In that case we go only 1 line up to get the proper context
+  if (cursor_range[1] + 1) == vim.fn.line('$') and vim.trim(vim.fn.getline('$')) == '' then
+    cursor_range[1] = cursor_range[1] - 1
+  end
   return self.tree:root():named_descendant_for_range(cursor_range[1], cursor_range[2], cursor_range[1], cursor_range[2])
 end
 
@@ -267,9 +279,8 @@ function File:get_closest_headline(id)
     node = self:get_node_at_cursor()
   else
     local cursor_range = { id - 1, vim.fn.col('$') - 2 }
-    node = self.tree
-      :root()
-      :named_descendant_for_range(cursor_range[1], cursor_range[2], cursor_range[1], cursor_range[2])
+    node =
+      self.tree:root():named_descendant_for_range(cursor_range[1], cursor_range[2], cursor_range[1], cursor_range[2])
   end
 
   if not node then
@@ -321,9 +332,8 @@ end
 
 ---@return string
 function File:get_archive_file_location()
-  local matches = self:get_ts_matches('(document (directive (name) @name (value) @value (#eq? @name "ARCHIVE")))')
-  if #matches > 0 then
-    return config:parse_archive_location(self.filename, matches[1].value.text)
+  if self.archive_location then
+    return self.archive_location
   end
   return config:parse_archive_location(self.filename)
 end
@@ -335,11 +345,8 @@ function File:get_section(index)
 end
 
 ---@private
-function File:_parse_sections_and_root_directives()
+function File:_parse_sections()
   for child in self.tree:root():iter_children() do
-    if child:type() == 'directive' then
-      self:_parse_directive(child)
-    end
     if child:type() == 'section' then
       local section = Section.from_node(child, self)
       table.insert(self.sections, section)
@@ -366,11 +373,11 @@ end
 
 ---@private
 function File:_parse_source_code_filetypes()
-  local blocks = self:get_ts_matches('(block (name) @name (parameters) @parameters (#eq? @name "SRC"))')
+  local blocks =
+    self:get_ts_matches('(block name: (expr) @name parameter: (expr) @parameters (#match? @name "(src|SRC)"))')
   local source_code_filetypes = {}
   for _, item in ipairs(blocks) do
-    local params = vim.split(item.parameters.text, '%s+')
-    local ft = params[1]
+    local ft = item.parameters and item.parameters.text
     if
       ft
       and ft ~= ''
@@ -383,18 +390,22 @@ function File:_parse_source_code_filetypes()
   self.source_code_filetypes = source_code_filetypes
 end
 
-function File:_parse_directive(node)
-  local name = node:named_child(0)
-  local value = node:named_child(1)
-  if not name or not value then
-    return
+function File:_parse_directives()
+  local directives = self:get_ts_matches([[(directive name: (expr) @name value: (value) @value)]])
+  local tags = {}
+  for _, directive in ipairs(directives) do
+    local directive_name = directive.name.text:lower()
+    if directive_name == 'filetags' then
+      utils.concat(tags, utils.parse_tags_string(directive.value.text), true)
+    end
+    if directive_name == 'archive' then
+      self.archive_location = config:parse_archive_location(self.filename, directive.value.text)
+    end
+    if directive_name == 'category' then
+      self.category = directive.value.text
+    end
   end
-
-  local name_text = self:get_node_text(name)
-  if name_text:upper() == 'FILETAGS' then
-    local value_text = self:get_node_text(value)
-    self.tags = utils.parse_tags_string(value_text)
-  end
+  self.tags = tags
 end
 
 return File

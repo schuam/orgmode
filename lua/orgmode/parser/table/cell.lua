@@ -1,9 +1,10 @@
-local Range = require('orgmode.parser.range')
+local utils = require('orgmode.utils')
 
 ---@class TableCell
 ---@field row TableRow
 ---@field value string
 ---@field len number
+---@field display_len number
 ---@field col number
 ---@field range Range
 ---@field content string
@@ -16,6 +17,7 @@ function TableCell:new(opts)
   data.row = opts.row
   data.value = opts.value
   data.len = opts.value:len()
+  data.display_len = vim.api.nvim_strwidth(opts.value)
   data.col = opts.col or 1
   data.reference = opts.reference
   data.range = data.row.range:clone()
@@ -32,7 +34,7 @@ function TableCell:compile()
   if self.row.is_separator then
     val = string.format('-%s-', string.rep('-', width))
   else
-    val = string.format(' %-' .. width .. 's ', self.value)
+    val = string.format(' %s ', utils.pad_right(self.value, width))
   end
   local start_col = self.row.table.start_col + 2
   if self.col > 1 then

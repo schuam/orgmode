@@ -1,5 +1,6 @@
 local config = require('orgmode.config')
 local Date = require('orgmode.objects.date')
+local utils = require('orgmode.utils')
 local expansions = {
   ['%f'] = function()
     return vim.fn.expand('%')
@@ -26,7 +27,7 @@ local expansions = {
     return string.format('[%s]', Date.now():to_string())
   end,
   ['%a'] = function()
-    return string.format('[[file:%s +%s]]', vim.api.nvim_buf_get_name(0), vim.api.nvim_win_get_cursor(0)[1])
+    return string.format('[[file:%s +%s]]', utils.current_file_path(), vim.api.nvim_win_get_cursor(0)[1])
   end,
 }
 
@@ -39,7 +40,7 @@ local Templates = {}
 -- TODO Introduce type
 function Templates:new()
   local opts = {}
-  opts.templates = config.org_agenda_templates
+  opts.templates = config.org_agenda_templates or config.org_capture_templates
   setmetatable(opts, self)
   self.__index = self
   return opts
@@ -55,13 +56,9 @@ function Templates:compile(template)
     content = table.concat(content, '\n')
   end
   content = self:_compile_dates(content)
-  content = self:_compile_prompts(content)
+  content = self:_compile_expansions(content)
   content = self:_compile_expressions(content)
-  for expansion, compiler in pairs(expansions) do
-    if content:match(vim.pesc(expansion)) then
-      content = content:gsub(vim.pesc(expansion), compiler())
-    end
-  end
+  content = self:_compile_prompts(content)
   return vim.split(content, '\n', true)
 end
 
@@ -69,7 +66,7 @@ function Templates:setup()
   local initial_position = vim.fn.search('%?')
   local is_at_end_of_line = vim.fn.search('%?$') > 0
   if initial_position > 0 then
-    vim.cmd([[norm!c2l]])
+    vim.cmd([[norm!"_c2l]])
     if is_at_end_of_line then
       vim.cmd([[startinsert!]])
     else
@@ -77,6 +74,18 @@ function Templates:setup()
       vim.cmd([[startinsert]])
     end
   end
+end
+
+---@param content string
+---@return string
+function Templates:_compile_expansions(content, found_expansions)
+  found_expansions = found_expansions or expansions
+  for expansion, compiler in pairs(found_expansions) do
+    if content:match(vim.pesc(expansion)) then
+      content = content:gsub(vim.pesc(expansion), compiler())
+    end
+  end
+  return content
 end
 
 ---@param content string

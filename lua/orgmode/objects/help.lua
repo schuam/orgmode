@@ -10,7 +10,7 @@ local helps = {
     },
     {
       key = 'org_timestamp_down',
-      description = 'Decerase date part under cursor (year/month/day/hour/minute/repeater/active|inactive)',
+      description = 'Decrease date part under cursor (year/month/day/hour/minute/repeater/active|inactive)',
     },
     { key = 'org_timestamp_up_day', description = 'Increase date under cursor by 1 day' },
     { key = 'org_timestamp_down_day', description = 'Decrease date under cursor by 1 day' },
@@ -22,6 +22,7 @@ local helps = {
     { key = 'org_todo_prev', description = 'Backward change TODO state of current headline' },
     { key = 'org_toggle_checkbox', description = 'Toggle checkbox state' },
     { key = 'org_open_at_point', description = 'Open hyperlink or date under cursor' },
+    { key = 'org_edit_special', description = 'Edit the source block under the cursor in another buffer' },
     { key = 'org_cycle', description = 'Toggle folding on current headline' },
     { key = 'org_global_cycle', description = 'Toggle folding in whole file' },
     { key = 'org_archive_subtree', description = 'Archive subtree to archive file' },
@@ -53,6 +54,7 @@ local helps = {
     { key = 'org_clock_goto', description = 'Jump to currently clocked in heading' },
     { key = 'org_set_effort', description = 'Set effort estimate on current heading' },
     { key = 'org_show_help', description = 'Show this help' },
+    { key = 'org_toggle_heading', description = 'Toggle current line to headline and vice versa' },
   },
   orgagenda = {
     { key = 'org_agenda_later', description = 'Go forward one span' },
@@ -92,6 +94,10 @@ local helps = {
     { key = 'org_capture_refile', description = 'Save to specific destination' },
     { key = 'org_capture_kill', description = 'Close without saving' },
   },
+  edit_src = {
+    { key = 'org_edit_src_abort', description = 'Abort edit special buffer changes and discard content' },
+    { key = 'org_edit_src_save', description = 'Apply changes from the special buffer to the source Org buffer' },
+  },
   text_objects = {
     { key = 'inner_heading', description = 'Select inner heading' },
     { key = 'around_heading', description = 'Select around heading' },
@@ -109,49 +115,114 @@ local Help = {
   win = nil,
 }
 
----@return string[]
-function Help.prepare_content()
-  local mappings = config.mappings
-  local ft = vim.bo.filetype
-  local max_height = vim.o.lines - 2
-  local scroll_more_text = ''
-  if ft == 'orgagenda' then
-    if #helps.orgagenda > max_height then
-      scroll_more_text = ' (Scroll down for more)'
-    end
-    local content = { string.format(' **Orgmode mappings - Agenda%s:**', scroll_more_text), '' }
-    for _, item in ipairs(helps.orgagenda) do
-      local maps = mappings.agenda[item.key]
-      if type(maps) == 'table' then
-        maps = table.concat(maps, ', ')
-      end
-      table.insert(content, string.format('  `%-12s` - %s', maps, item.description))
-    end
-    table.insert(content, '')
-    table.insert(content, string.format('  `%-12s` - %s', '<Esc>, q', 'Close this help'))
-    return content
+function Help._get_content_type(opts)
+  if opts.type then
+    return opts.type
   end
 
   local has_capture, is_capture = pcall(vim.api.nvim_buf_get_var, 0, 'org_capture')
-  local content = {}
   if has_capture and is_capture then
-    if (#helps.capture + #helps.org) > max_height then
-      scroll_more_text = ' (Scroll down for more)'
+    return 'orgcapture'
+  end
+
+  local ft = vim.bo.filetype
+  local prepare_func = '_prepare_' .. ft
+  if Help[prepare_func] then
+    return ft
+  end
+
+  return 'org'
+end
+
+function Help._prepare_org(_, max_height)
+  local scroll_more_text = ''
+  if #helps.org > max_height then
+    scroll_more_text = ' (Scroll down for more)'
+  end
+
+  return { string.format(' **Orgmode mappings - Org:%s**', scroll_more_text), '' }, false
+end
+
+function Help._prepare_orgcapture(mappings, max_height)
+  local scroll_more_text = ''
+  if (#helps.capture + #helps.org) > max_height then
+    scroll_more_text = ' (Scroll down for more)'
+  end
+
+  local content = { string.format(' **Orgmode mappings Capture + Org:%s**', scroll_more_text), '', '  __Capture__' }
+  for _, item in ipairs(helps.capture) do
+    local maps = mappings.capture[item.key]
+    if type(maps) == 'table' then
+      maps = table.concat(maps, ', ')
     end
-    content = { string.format(' **Orgmode mappings Capture + Org:%s**', scroll_more_text), '', '  __Capture__' }
-    for _, item in ipairs(helps.capture) do
-      local maps = mappings.capture[item.key]
-      if type(maps) == 'table' then
-        maps = table.concat(maps, ', ')
-      end
-      table.insert(content, string.format('  `%-12s` - %s', maps, item.description))
+
+    table.insert(content, string.format('  `%-12s` - %s', maps, item.description))
+  end
+
+  table.insert(content, '  __Org__')
+
+  return content, false
+end
+
+function Help._prepare_orgagenda(mappings, max_height)
+  local scroll_more_text = ''
+  if #helps.orgagenda > max_height then
+    scroll_more_text = ' (Scroll down for more)'
+  end
+
+  local content = { string.format(' **Orgmode mappings - Agenda%s:**', scroll_more_text), '' }
+  for _, item in ipairs(helps.orgagenda) do
+    local maps = mappings.agenda[item.key]
+    if type(maps) == 'table' then
+      maps = table.concat(maps, ', ')
     end
-    table.insert(content, '  __Org__')
-  else
-    if #helps.org > max_height then
-      scroll_more_text = ' (Scroll down for more)'
+
+    table.insert(content, string.format('  `%-12s` - %s', maps, item.description))
+  end
+
+  table.insert(content, '')
+  table.insert(content, string.format('  `%-12s` - %s', '<Esc>, q', 'Close this help'))
+
+  return content, true
+end
+
+function Help._prepare_edit_src(mappings, max_height)
+  local scroll_more_text = ''
+  if #helps.edit_src > max_height then
+    scroll_more_text = ' (Scroll down for more)'
+  end
+
+  local content = { string.format(' **Orgmode mappings - Edit Src%s:**', scroll_more_text), '' }
+
+  for _, item in ipairs(helps.edit_src) do
+    local maps = mappings.edit_src[item.key]
+    if type(maps) == 'table' then
+      maps = table.concat(maps, ', ')
     end
-    content = { string.format(' **Orgmode mappings - Org:%s**', scroll_more_text), '' }
+
+    table.insert(content, string.format('  `%-12s` - %s', maps, item.description))
+  end
+
+  return content, true
+end
+
+---@return string[]
+function Help.prepare_content(opts)
+  opts = opts or {}
+
+  local mappings = config.mappings
+  local max_height = vim.o.lines - 2
+
+  local t = Help._get_content_type(opts)
+
+  local prepare_func = Help['_prepare_' .. t]
+  if not prepare_func then
+    return
+  end
+
+  local content, include_generic = prepare_func(mappings, max_height)
+  if include_generic then
+    return content
   end
 
   for _, item in ipairs(helps.org) do
@@ -159,6 +230,7 @@ function Help.prepare_content()
     if type(maps) == 'table' then
       maps = table.concat(maps, ', ')
     end
+
     table.insert(content, string.format('  `%-12s` - %s', maps, item.description))
   end
 
@@ -169,14 +241,22 @@ function Help.prepare_content()
 
   table.insert(content, '')
   table.insert(content, string.format('  `%-12s` - %s', '<Esc>, q', 'Close this help'))
+
   return content
 end
 
-function Help.show()
-  local opts = {
+function Help.show(opts)
+  opts = opts or {}
+
+  local content = Help.prepare_content(opts)
+  local longest = utils.reduce(content, function(acc, item)
+    return math.max(acc, item:len())
+  end, 0)
+
+  local window_opts = {
     relative = 'editor',
-    width = vim.o.columns / 2,
-    height = vim.o.lines - 10,
+    width = math.min(longest + 2, vim.o.columns - 2),
+    height = math.min(#content + 1, vim.o.lines - 2),
     anchor = 'NW',
     style = 'minimal',
     border = 'single',
@@ -184,21 +264,14 @@ function Help.show()
     col = vim.o.columns / 4,
   }
 
-  local content = Help.prepare_content()
-  local longest = utils.reduce(content, function(acc, item)
-    return math.max(acc, item:len())
-  end, 0)
-
-  opts.width = math.min(longest + 2, vim.o.columns - 2)
-  opts.height = math.min(#content + 1, vim.o.lines - 2)
-  opts.row = (vim.o.lines - opts.height) / 2
-  opts.col = (vim.o.columns - opts.width) / 2
+  window_opts.row = (vim.o.lines - window_opts.height) / 2
+  window_opts.col = (vim.o.columns - window_opts.width) / 2
 
   Help.buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_name(Help.buf, 'orghelp')
   vim.api.nvim_buf_set_option(Help.buf, 'filetype', 'orghelp')
   vim.api.nvim_buf_set_option(Help.buf, 'bufhidden', 'wipe')
-  Help.win = vim.api.nvim_open_win(Help.buf, true, opts)
+  Help.win = vim.api.nvim_open_win(Help.buf, true, window_opts)
 
   vim.api.nvim_buf_set_lines(Help.buf, 0, -1, true, content)
 
@@ -209,10 +282,17 @@ function Help.show()
   vim.api.nvim_buf_set_option(Help.buf, 'modifiable', false)
   vim.api.nvim_buf_set_var(Help.buf, 'indent_blankline_enabled', false)
 
-  utils.buf_keymap(Help.buf, 'n', 'q', ':bw!<CR>')
-  utils.buf_keymap(Help.buf, 'n', '<Esc>', ':bw!<CR>')
+  vim.keymap.set('n', 'q', ':call nvim_win_close(win_getid(), v:true)<CR>', { buffer = Help.buf, silent = true })
+  vim.keymap.set('n', '<Esc>', ':call nvim_win_close(win_getid(), v:true)<CR>', { buffer = Help.buf, silent = true })
 
-  vim.cmd([[autocmd BufWipeout <buffer> lua require('orgmode.objects.help').dispose()]])
+  local org_help_augroup = vim.api.nvim_create_augroup('org_help', { clear = true })
+  vim.api.nvim_create_autocmd('BufWipeout', {
+    buffer = Help.buf,
+    group = org_help_augroup,
+    callback = function()
+      require('orgmode.objects.help').dispose()
+    end,
+  })
 end
 
 function Help.dispose()

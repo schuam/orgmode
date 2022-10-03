@@ -1,24 +1,35 @@
 # Table of content
 
-1. [Settings](#settings)
+1. [Getting started with Orgmode](#getting-started-with-orgmode)
+2. [Settings](#settings)
    1. [Global settings](#global-settings)
-   2. [Agenda settings](#global-settings)
-   3. [Tags settings](#global-settings)
-2. [Mappings](#mappings)
+   2. [Agenda settings](#agenda-settings)
+   3. [Tags settings](#tags-settings)
+3. [Mappings](#mappings)
    1. [Global mappings](#global-mappings)
    2. [Agenda mappings](#agenda-mappings)
    3. [Capture mappings](#capture-mappings)
    4. [Org mappings](#org-mappings)
-   5. [Text objects](#text-objects)
-   6. [Dot repeat](#dot-repeat)
-3. [Document Diagnostics](#document-diagnostics)
-4. [Autocompletion](#autocompletion)
-5. [Abbreviations](#abbreviations)
-6. [Colors](#colors)
-7. [Advanced search](#advanced-search)
-8. [Notifications (experimental)](#notifications-experimental)
-9. [Clocking](#clocking)
-10. [Changelog](#changelog)
+   5. [Edit Src mappings](#edit-src)
+   6. [Text objects](#text-objects)
+   7. [Dot repeat](#dot-repeat)
+4. [Document Diagnostics](#document-diagnostics)
+5. [Tables](#tables)
+6. [Hyperlinks](#hyperlinks)
+7. [Autocompletion](#autocompletion)
+8. [Abbreviations](#abbreviations)
+9. [Formatting](#formatting)
+10. [Colors](#colors)
+11. [Advanced search](#advanced-search)
+12. [Notifications (experimental)](#notifications-experimental)
+13. [Clocking](#clocking)
+14. [Changelog](#changelog)
+
+## Getting started with Orgmode
+To get a basic idea how Orgmode works, look at this screencast from [@dhruvasagar](https://github.com/dhruvasagar)
+that demonstrates how the similar Orgmode clone [vim-dotoo](https://github.com/dhruvasagar/vim-dotoo) works.
+
+[https://www.youtube.com/watch?v=nsv33iOnH34](https://www.youtube.com/watch?v=nsv33iOnH34)
 
 ## Settings
 Variable names mostly follow the same naming as Orgmode mappings.
@@ -65,7 +76,60 @@ NOTE: Make sure fast access keys do not overlap. If that happens, first entry in
 *type*: `boolean`<br />
 *default value*: `true`<br />
 Should error diagnostics be shown. If you are using Neovim 0.6.0 or higher, these will be shown via `vim.diagnostic`.<br />
-If you are on 0.5.1 or lower, you need to use `:OrgDiagnostics` command to print the errors in the command line.
+
+#### **win_split_mode**
+*type*: `string|function|table`<br />
+*default value*: `horizontal`<br />
+Available options:
+* `horizontal` - Always split horizontally
+* `vertical` - Always split vertically
+* `auto` - Determine between horizontal and vertical split depending on the current window size
+* `float` - Open in float window that has width of 70% of the screen centered
+* `{'float', 0.9}` - Open in float window and provide custom scale (in this case it's 90% of screen size), must be value between `0` and `1`
+
+This option determines how to open agenda and capture window.<br />
+If none of the options above suit your needs, you can provide custom command string (see `:help <mods>`) or custom function:
+Here are few examples:<br />
+
+Open in float window:
+```lua
+win_split_mode = function(name)
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  --- Setting buffer name is required
+  vim.api.nvim_buf_set_name(bufnr, name)
+
+  local fill = 0.8
+  local width = math.floor((vim.o.columns * fill))
+  local height = math.floor((vim.o.lines * fill))
+  local row = math.floor((((vim.o.lines - height) / 2) - 1))
+  local col = math.floor(((vim.o.columns - width) / 2))
+
+  vim.api.nvim_open_win(bufnr, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    style = "minimal",
+    border = "rounded"
+  })
+end
+```
+
+Always open in tab:
+```
+win_split_mode = 'tabnew'
+```
+
+Always open vertically:
+```
+win_split_mode = 'vsplit'
+```
+
+Always open horizontally with specific height of 20 lines:
+```
+win_split_mode = '20split'
+```
 
 #### **org_todo_keyword_faces**
 *type*: `table<string, string>`<br />
@@ -77,6 +141,8 @@ Available options:
 * weight - `:weight bold`.
 * underline - `:underline on`
 * italic - `:slant italic`
+
+---
 
 Full configuration example with additional todo keywords and their colors:
 ```lua
@@ -146,14 +212,13 @@ Marker used to indicate a folded headline.
 When set to `time`(default), adds `CLOSED` date when marking headline as done.<br />
 When set to `false`, it is disabled.
 
-
 #### **org_highlight_latex_and_related**
 *type*: `string|nil`<br />
 *default value*: `nil`<br />
 Possible values:
 * `native` - Includes whole latex syntax file into the org syntax. It can potentially cause some highlighting issues and slowness.
 * `entities` - Highlight latex only in these situations (see [Orgmode latex fragments](https://orgmode.org/manual/LaTeX-fragments.html#LaTeX-fragments)):
-  * between `/begin` and `/end` delimiters
+  * between `\begin` and `\end` delimiters
   * between `$` and `$` delimiters - example: `$a^2=b$`
   * between `$$` and `$$` delimiters - example: `$$ a=+\sqrt{2} $$`
   * between `\[` and `\]` delimiters - example: `\[ a=-\sqrt{2} \]`
@@ -165,6 +230,19 @@ Possible values:
 Possible values:
 * `indent` - Use default indentation that follows headlines/checkboxes/previous line indent
 * `noindent` - Disable indentation. All lines start from 1st column
+
+#### **org_src_window_setup**
+*type*: `string|function`<br />
+*default value*: "top 16new"<br />
+If the value is a string, it will be run directly as input to `:h vim.cmd`, otherwise if the value is a function it will be called. Both
+values have the responsibility of opening a buffer (within a window) to show the special edit buffer. The content of the buffer will be
+set automatically, so this option only needs to handle opening an empty buffer.
+
+#### **org_edit_src_content_indentation**
+*type*: `number`<br />
+*default value*: 0<br />
+The indent value for content within `SRC` block types beyond the existing indent of the block itself. Only applied when exiting from
+an `org_edit_special` action on a `SRC` block.
 
 #### **org_custom_exports**
 *type*: `table`<br />
@@ -225,6 +303,20 @@ Determine if blank line should be prepended when:
 * Adding heading via `org_meta_return` and `org_insert_*` mappings
 * Adding a list item via `org_meta_return`
 
+#### **calendar_week_start_day**
+*type*: `number`<br />
+*default value*: `1`<br />
+Available options:
+* `0` - start week on Sunday
+* `1` - start week on Monday
+
+Determine on which day the week will start in calendar modal (ex: [changing the date under cursor](#org_change_date))
+
+#### **emacs_config**
+*type*: `table`<br />
+*default value*: `{ executable_path = 'emacs', config_path='$HOME/.emacs.d/init.el' }`<br />
+Set configuration for your emacs. This is useful for having the emacs export properly pickup your emacs config and plugins.
+
 ### Agenda settings
 
 #### **org_deadline_warning_days**
@@ -260,14 +352,14 @@ Example:<br />
   If `org_agenda_start_on_weekday` is `false`, and `org_agenda_start_day` is `-2d`,<br />
   agenda will always show current week from today - 2 days
 
-#### **org_agenda_templates**
+#### **org_capture_templates**
 *type*: `table<string, table>`<br />
 default value: `{ t = { description = 'Task', template = '* TODO %?\n  %u' } }`<br />
 Templates for capture/refile prompt.<br />
 Variables:
-  - `%f`: Prints the file of the buffer capture was called from
-  - `%F`: Like `%f` but inserts the full path
-  - `%n`: Inserts the current `$USER`
+  * `%f`: Prints the file of the buffer capture was called from
+  * `%F`: Like `%f` but inserts the full path
+  * `%n`: Inserts the current `$USER`
   * `%t`: Prints current date (Example: `<2021-06-10 Thu>`)
   * `%T`: Prints current date and time (Example: `<2021-06-10 Thu 12:30>`)
   * `%u`: Prints current date in inactive format (Example: `[2021-06-10 Thu]`)
@@ -277,13 +369,44 @@ Variables:
   * `%x`: Insert content of the clipboard via the "+" register (see :help clipboard)
   * `%?`: Default cursor position when template is opened
   * `%^{PROMPT|DEFAULT|COMPLETION...}`: Prompt for input, if completion is provided an :h inputlist will be used
-  - `%(EXP)`: Runs the given lua code and inserts the result
+  * `%(EXP)`: Runs the given lua code and inserts the result
 
 Example:<br />
-  `{ T = { description = 'Todo', template = '* TODO %?\n %u', target = '~/org/todo.org' } }`
+  ```lua
+  { T = {
+    description = 'Todo',
+    template = '* TODO %?\n %u',
+    target = '~/org/todo.org'
+  } }
+  ```
 
 Journal example:<br />
-  `{ j = { description = 'Journal', template = '\n*** %<%Y-%m-%d> %<%A>\n**** %U\n\n%?', target = '~/sync/org/journal.org' } }`
+  ```lua
+  { j = {
+    description = 'Journal',
+    template = '\n*** %<%Y-%m-%d> %<%A>\n**** %U\n\n%?',
+    target = '~/sync/org/journal.org'
+  } }
+  ```
+
+Nested key example:<br />
+  ```lua
+  {
+    e =  'Event',
+    er = {
+      description = 'recurring',
+      template = '** %?\n %T',
+      target = '~/org/calendar.org',
+      headline = 'recurring'
+    },
+    eo = {
+      description = 'one-time',
+      template = '** %?\n %T',
+      target = '~/org/calendar.org',
+      headline = 'one-time'
+    }
+  }
+  ```
 
 #### **org_agenda_min_height**
 *type*: `number`<br />
@@ -337,6 +460,15 @@ Example value: `{'agenda-archives'}`
 
 ### Tags settings
 
+#### **org_tags_column**
+*type*: `number`<br />
+*default value*: `80`<br />
+The column to which tags should be indented in a headline.
+If this number is positive, it specifies the column.
+If it is negative, it means that the tags should be flushright to that column.
+For example, -80 works well for a normal 80 character screen.
+When 0, place tags directly after headline text, with only one space in between.
+
 #### **org_use_tag_inheritance**
 *type*: `boolean`
 *default value*: `true`
@@ -360,12 +492,12 @@ Using the example above, setting this variable to `{'MYTAG'}`, second and third 
 ## Mappings
 
 Mappings try to mimic some of the Orgmode mappings, but since Orgmode uses `CTRL + c` as a modifier most of the time, we have to take a different route.
-When possible, instead of `CTRL + C`, prefix `<Leader>o` is used.
+When possible, instead of `CTRL + C`, prefix `<Leader>o` is used. This is customizable via the `mappings.prefix` setting.
 
 To disable all mappings, just pass `disable_all = true` to mappings settings:
 ```lua
 require('orgmode').setup({
-  org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+  org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
   org_default_notes_file = '~/Dropbox/org/refile.org',
   mappings = {
     disable_all = true
@@ -380,7 +512,7 @@ require('orgmode').setup({
 There are only 2 global mappings that are accessible from everywhere.
 
 #### **org_agenda**
-*mapped to*:  <kbd>\<Leader\>oa</kbd><br />
+*mapped to*:  `<Leader\>oa`<br />
 Opens up agenda prompt.
 
 #### **org_capture**
@@ -391,7 +523,7 @@ These live under `mappings.global` and can be overridden like this:
 
 ```lua
 require('orgmode').setup({
-  org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+  org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
   org_default_notes_file = '~/Dropbox/org/refile.org',
   mappings = {
     global = {
@@ -406,7 +538,7 @@ If you want to use multiple mappings for same thing, pass array of mappings:
 
 ```lua
 require('orgmode').setup({
-  org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+  org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
   org_default_notes_file = '~/Dropbox/org/refile.org',
   mappings = {
     global = {
@@ -489,6 +621,9 @@ Increase the priority of a headline item.
 #### **org_agenda_priority_down**
 *mapped to*: `-`<br />
 Decrease the priority of a headline item.
+#### **org_agenda_archive**
+mapped to: `<Leader>o$`<br />
+Archive headline item to archive location.
 #### **org_agenda_toggle_archive_tag**
 *mapped to*: `<Leader>oA`<br />
 Toggle "ARCHIVE" tag of a headline item.
@@ -519,7 +654,7 @@ These mappings live under `mappings.agenda`, and can be changed like this:
 
 ```lua
 require('orgmode').setup({
-  org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+  org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
   org_default_notes_file = '~/Dropbox/org/refile.org',
   mappings = {
     agenda = {
@@ -552,7 +687,7 @@ These mappings live under `mappings.capture`, and can be changed like this:
 
 ```lua
 require('orgmode').setup({
-  org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+  org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
   org_default_notes_file = '~/Dropbox/org/refile.org',
   mappings = {
     capture = {
@@ -569,7 +704,7 @@ require('orgmode').setup({
 Mappings for `org` files.
 #### **org_refile**
 *mapped to*: `<Leader>or`<br />
-Refile current headline to destination
+Refile current headline, including its subtree, to a destination org-file. This file must be one of the files specified for the `org_agenda_files` setting. A target headline in the destination file can be specified with `destination.org/<headline>`. If there are multiple headlines with the same name in the destination file, the first occurence will be used.
 #### **org_timestamp_up**
 *mapped to*: `<C-a>`<br />
 Increase date part under under cursor. Accepts count: (Example: `5<C-a>`)<br />
@@ -612,17 +747,17 @@ Cycle todo keyword backward on current headline.
 #### **org_toggle_checkbox**
 *mapped to*: `<C-Space>`<br />
 Toggle current line checkbox state
+#### **org_toggle_heading**
+*mapped to*: `<Leader>o*`<br />
+Toggle current line to headline and vice versa. Checkboxes will turn into TODO headlines.
 #### **org_open_at_point**
 *mapped to*: `<Leader>oo`<br />
-Open hyperlink or date under cursor.<br />
-Hyperlink types supported:
-* URL (http://, https://)
-* File (starts with `file:`. Example: `file:/home/user/.config/nvim/init.lua`) Optionally, a line number can be specified
-using the '+' character. Example: `file:/home/user/.config/nvim/init.lua +10`
-* Headline title target (starts with `*`)
-* Headline with `CUSTOM_ID` property (starts with `#`)
-* Fallback: If file path, opens the file, otherwise, tries to find the Headline title.
-When date is under the cursor, open the agenda for that day.<br />
+Open hyperlink or date under cursor. When date is under the cursor, open the agenda for that day.<br />
+#### **org_edit_special**
+*mapped to*: `<Leader>o'`<br />
+Open a source block for editing in a temporary buffer of the associated `filetype`.<br />
+This is useful for editing text with language servers attached, etc. When the buffer is closed, the text of the underlying source block in the original Org file is updated.
+*Note that if the Org file that the source block comes from is edited before the special edit buffer is closed, the edits will not be applied. The special edit buffer contents can be recovered from :messages output*
 #### **org_cycle**
 *mapped to*: `<TAB>`<br />
 Cycle folding for current headline
@@ -728,7 +863,7 @@ These mappings live under `mappings.org`, and can be changed like this:
 
 ```lua
 require('orgmode').setup({
-  org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+  org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
   org_default_notes_file = '~/Dropbox/org/refile.org',
   mappings = {
     org = {
@@ -738,6 +873,22 @@ require('orgmode').setup({
   }
 })
 ```
+
+### Edit Src
+
+Mappings applied when editing a `SRC` block content via `org_edit_special`.
+
+#### **org_edit_src_abort**
+*mapped to*: `<Leader>ok`<br />
+Abort changes made to temporary buffer created from the content of a `SRC` block, see above.<br />
+
+#### **org_edit_src_save**
+*mapped to*: `<Leader>ow`<br />
+Apply changes from the special buffer to the source Org buffer<br />
+
+#### **org_edit_src_show_help**
+*mapped to*: `g?`<br />
+Show help within the temporary buffer used to edit the content of a `SRC` block.<br />
 
 ### Text objects
 
@@ -784,7 +935,7 @@ These mappings live under `mappings.text_objects`, and can be changed like this:
 
 ```lua
 require('orgmode').setup({
-  org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+  org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
   org_default_notes_file = '~/Dropbox/org/refile.org',
   mappings = {
     text_objects = {
@@ -799,10 +950,42 @@ To make all mappings dot repeatable, install [vim-repeat](https://github.com/tpo
 
 ## Document Diagnostics
 Since tree-sitter parser is being used to parse the file, if there are some syntax errors,
-it can potentially fail to parse specific parts of document when needed. If you are using Neovim v0.6.0 which has
-`vim.diagnostic` available (see `:help vim.diagnostic`), you will get diagnostic errors reported inline.<br />
-If you are using v0.5.1 or lower, you need to use `:OrgDiagnostics` command to view the error details.<br />
-When file is saved, if there are any errors, you will be notified in the command line (0.5.1 and lower).
+it can potentially fail to parse specific parts of document when needed.
+
+## Tables
+Tables can be formatted via built in `formatexpr` (see `:help gq`)
+
+For example, having this content:
+```
+* TODO My headline
+  DEADLINE: <2022-05-22 Sun>
+
+  |Header 1|Header 2
+  |-
+  | col 1| col 2|
+```
+
+And going to line `4` and pressing `gqgq`, it will format it to this:
+```
+* TODO My headline
+  DEADLINE: <2022-05-22 Sun>
+
+  | Header 1 | Header 2 |
+  |----------+----------|
+  | col 1    | col 2    |
+```
+
+## Hyperlinks
+
+The format for links is either `[[LINK]]` or `[[LINK][DESCRIPTION]]`. If a description is provided, the actual link is concealed in favor of the description.
+
+Hyperlink types supported:
+* URL (http://, https://)
+* File (starts with `file:`. Example: `file:/home/user/.config/nvim/init.lua`) Optionally, a line number can be specified
+using the '+' character (Example: `file:/home/user/.config/nvim/init.lua +10`) or a headline within the specified file using '::' (Example: `file:/home/user/org/file.org::*Specific Headline`)
+* Headline title target within the same file (starts with `*`)
+* Headline with `CUSTOM_ID` property within the same file (starts with `#`)
+* Fallback: If file path, opens the file, otherwise, tries to find the headline title.
 
 ## Autocompletion
 By default, `omnifunc` is provided in `org` files that autocompletes these types:
@@ -863,6 +1046,18 @@ Some content [[|
 * `:today:` - expands to today's date (example: `<2021-06-29 Tue>`)
 * `:now:` - expands to today's date and current time (example: `<2021-06-29 Tue 15:32>`)
 
+## Formatting
+Formatting is done via `gq` mapping, which uses `formatexpr` under the hood (see `:help formatexpr` for more info).
+For example, to re-format whole document, you can do `gggqG`. `gg` goes to first line in current file, `gq` starts the format motion,
+and `G` goes to last line in file to make it format the whole thing. To format a single line, do `gqgq`, or to format selection,
+select the lines you want to format and just do `gq`.
+
+Currently, these things are formatted:
+
+* Tags are aligned according to the `org_tags_column` setting
+* Tables are formatted (see [Tables](#Tables) for more info)
+* Clock entries total time is recalculated (see [Recalculating totals](#recalculating-totals) in [Clocking](#Clocking) section)
+
 ## Colors
 Colors used for todo keywords and agenda states (deadline, schedule ok, schedule warning)
 are parsed from the current colorsheme from several highlight groups (Error, WarningMsg, DiffAdd, etc.).
@@ -895,33 +1090,35 @@ For adding/changing TODO keyword colors see [org-todo-keyword-faces](#org_todo_k
 * The following highlight groups are based on _Treesitter_ query results, hence when setting up _Orgmode_ these
   highlights must be enabled by removing `disable = {'org'}` from the default recommended _Treesitter_ configuration.
 
-`OrgTSTimestampActive`: An active timestamp
-`OrgTSTimestampInactive`: An inactive timestamp
-`OrgTSBullet`: A normal bullet under a header item
-`OrgTSPropertyDrawer`: Property drawer start/end delimiters
-`OrgTSDrawer`: Drawer start/end delimiters
-`OrgTSTag`: A tag for a headline item, shown on the righthand side like `:foo:`
-`OrgTSPlan`: `SCHEDULED`, `DEADLINE`, `CLOSED`, etc. keywords
-`OrgTSComment`: A comment block
-`OrgTSDirective`: Blocks starting with `#+`
-`OrgTSCheckbox`: The default checkbox highlight, overridden if any of the below groups are specified
-`OrgTSCheckboxChecked`: A checkbox checked with either `[x]` or `[X]`
-`OrgTSCheckboxHalfChecked`: A checkbox checked with `[-]`
-`OrgTSCheckboxUnchecked`: A empty checkbox
-`OrgTSHeadlineLevel1`: Headline at level 1
-`OrgTSHeadlineLevel2`: Headline at level 2
-`OrgTSHeadlineLevel3`: Headline at level 3
-`OrgTSHeadlineLevel4`: Headline at level 4
-`OrgTSHeadlineLevel5`: Headline at level 5
-`OrgTSHeadlineLevel6`: Headline at level 6
-`OrgTSHeadlineLevel7`: Headline at level 7
-`OrgTSHeadlineLevel8`: Headline at level 8
+  * `OrgTSTimestampActive`: An active timestamp
+  * `OrgTSTimestampInactive`: An inactive timestamp
+  * `OrgTSBullet`: A normal bullet under a header item
+  * `OrgTSPropertyDrawer`: Property drawer start/end delimiters
+  * `OrgTSDrawer`: Drawer start/end delimiters
+  * `OrgTSTag`: A tag for a headline item, shown on the righthand side like `:foo:`
+  * `OrgTSPlan`: `SCHEDULED`, `DEADLINE`, `CLOSED`, etc. keywords
+  * `OrgTSComment`: A comment block
+  * `OrgTSLatex`: LaTeX block
+  * `OrgTSDirective`: Blocks starting with `#+`
+  * `OrgTSCheckbox`: The default checkbox highlight, overridden if any of the below groups are specified
+  * `OrgTSCheckboxChecked`: A checkbox checked with either `[x]` or `[X]`
+  * `OrgTSCheckboxHalfChecked`: A checkbox checked with `[-]`
+  * `OrgTSCheckboxUnchecked`: A empty checkbox
+  * `OrgTSHeadlineLevel1`: Headline at level 1
+  * `OrgTSHeadlineLevel2`: Headline at level 2
+  * `OrgTSHeadlineLevel3`: Headline at level 3
+  * `OrgTSHeadlineLevel4`: Headline at level 4
+  * `OrgTSHeadlineLevel5`: Headline at level 5
+  * `OrgTSHeadlineLevel6`: Headline at level 6
+  * `OrgTSHeadlineLevel7`: Headline at level 7
+  * `OrgTSHeadlineLevel8`: Headline at level 8
 
 * The following use vanilla _Vim_ syntax matching, and will work without _Treesitter_ highlighting enabled.
 
-`OrgAgendaDeadline`: A item deadline in the agenda view
-`OrgAgendaScheduled`: A scheduled item in the agenda view
-`OrgAgendaScheduledPast`: A item past its scheduled date in the agenda view
+  * `OrgEditSrcHighlight`: The highlight for the source content in an _Org_ buffer while it is being edited in an edit special buffer
+  * `OrgAgendaDeadline`: A item deadline in the agenda view
+  * `OrgAgendaScheduled`: A scheduled item in the agenda view
+  * `OrgAgendaScheduledPast`: A item past its scheduled date in the agenda view
 
 ## Advanced search
 Part of [Advanced search](https://orgmode.org/worg/org-tutorials/advanced-searching.html) functionality
@@ -1097,7 +1294,7 @@ Agenda view mapping: `I`<br />
 Start the clock by adding or updating the `:LOGBOOK:` drawer. Note that this clocks out any currently active clock.<br />
 Also, agenda/todo/search view highlights item that is clocked in.
 ##### Clock out
-Org file mapping: `<leader>oxi`<br />
+Org file mapping: `<leader>oxo`<br />
 Agenda view mapping: `O`<br />
 Clock out the entry and update the `:LOGBOOK:` drawer, and also add a total tracked time.<br />
 Note that in agenda view pressing `O` anywhere clocks the currently active entry, while in org file cursor must be in the headline subtree.
@@ -1133,6 +1330,7 @@ set statusline=%{v:lua.orgmode.statusline()}
 ```
 
 ## Changelog
+To track breaking changes, subscribe to [Notice of breaking changes](https://github.com/nvim-orgmode/orgmode/issues/217) issue where those are announced.
 
 #### 24 October 2021
 * Help mapping was changed from `?` to `g?` to avoid conflict with built in backward search. See issue [#106](https://github.com/nvim-orgmode/orgmode/issues/106).

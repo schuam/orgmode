@@ -1,6 +1,9 @@
 local helpers = require('tests.plenary.ui.helpers')
+local org = require('orgmode')
 local config = require('orgmode.config')
+local Files = require('orgmode.parser.files')
 local Date = require('orgmode.objects.date')
+local Capture = require('orgmode.capture')
 
 describe('Mappings', function()
   after_each(function()
@@ -203,107 +206,6 @@ describe('Mappings', function()
     assert.are.same('  DEADLINE: <2021-07-21 Wed 21:37>', vim.fn.getline('.'))
   end)
 
-  it('should change todo state of a headline forward (org_todo)', function()
-    helpers.load_file_content({
-      '#TITLE: Test',
-      '',
-      '* TODO Test orgmode',
-      '  DEADLINE: <2021-07-21 Wed 22:02>',
-    })
-    assert.are.same({
-      '* TODO Test orgmode',
-      '  DEADLINE: <2021-07-21 Wed 22:02>',
-    }, vim.api.nvim_buf_get_lines(0, 2, 4, false))
-    vim.fn.cursor(3, 1)
-
-    -- Changing to DONE and adding closed date
-    vim.cmd([[norm cit]])
-    assert.are.same({
-      '* DONE Test orgmode',
-      '  DEADLINE: <2021-07-21 Wed 22:02> CLOSED: [' .. Date.now():to_string() .. ']',
-    }, vim.api.nvim_buf_get_lines(0, 2, 4, false))
-
-    -- Removing todo keyword and removing closed date
-    vim.cmd([[norm cit]])
-    assert.are.same({
-      '* Test orgmode',
-      '  DEADLINE: <2021-07-21 Wed 22:02>',
-    }, vim.api.nvim_buf_get_lines(0, 2, 4, false))
-
-    -- Setting TODO keyword, initial state
-    vim.cmd([[norm cit]])
-    assert.are.same({
-      '* TODO Test orgmode',
-      '  DEADLINE: <2021-07-21 Wed 22:02>',
-    }, vim.api.nvim_buf_get_lines(0, 2, 4, false))
-  end)
-
-  it('should change todo state of a headline backward (org_todo_prev)', function()
-    helpers.load_file_content({
-      '#TITLE: Test',
-      '',
-      '* TODO Test orgmode',
-      '  DEADLINE: <2021-07-21 Wed 22:02>',
-    })
-
-    assert.are.same({
-      '* TODO Test orgmode',
-      '  DEADLINE: <2021-07-21 Wed 22:02>',
-    }, vim.api.nvim_buf_get_lines(0, 2, 4, false))
-    vim.fn.cursor(3, 1)
-
-    -- Removing todo keyword
-    vim.cmd([[norm ciT]])
-    assert.are.same({
-      '* Test orgmode',
-      '  DEADLINE: <2021-07-21 Wed 22:02>',
-    }, vim.api.nvim_buf_get_lines(0, 2, 4, false))
-
-    -- Changing to DONE and adding closed date
-    vim.cmd([[norm ciT]])
-    assert.are.same({
-      '* DONE Test orgmode',
-      '  DEADLINE: <2021-07-21 Wed 22:02> CLOSED: [' .. Date.now():to_string() .. ']',
-    }, vim.api.nvim_buf_get_lines(0, 2, 4, false))
-
-    -- Setting TODO keyword, initial state
-    vim.cmd([[norm ciT]])
-    assert.are.same({
-      '* TODO Test orgmode',
-      '  DEADLINE: <2021-07-21 Wed 22:02>',
-    }, vim.api.nvim_buf_get_lines(0, 2, 4, false))
-  end)
-
-  it('should change todo state of repeatable task and add last repeat property and state change (org_todo)', function()
-    helpers.load_file_content({
-      '#TITLE: Test',
-      '',
-      '* TODO Test orgmode',
-      '  DEADLINE: <2021-09-07 Tue 12:00 +1w>',
-      '',
-      '* TODO Another task',
-    })
-
-    assert.are.same({
-      '* TODO Test orgmode',
-      '  DEADLINE: <2021-09-07 Tue 12:00 +1w>',
-      '',
-      '* TODO Another task',
-    }, vim.api.nvim_buf_get_lines(0, 2, 6, false))
-    vim.fn.cursor(3, 1)
-    vim.cmd([[norm cit]])
-    assert.are.same({
-      '* TODO Test orgmode',
-      '  DEADLINE: <2021-09-14 Tue 12:00 +1w>',
-      '  :PROPERTIES:',
-      '  :LAST_REPEAT: [' .. Date.now():to_string() .. ']',
-      '  :END:',
-      '  - State "DONE" from "TODO" [' .. Date.now():to_string() .. ']',
-      '',
-      '* TODO Another task',
-    }, vim.api.nvim_buf_get_lines(0, 2, 10, false))
-  end)
-
   it('should toggle the checkbox state (org_toggle_checkbox)', function()
     helpers.load_file_content({
       '* TODO top level todo with multiple tags :OFFICE:PROJECT:',
@@ -322,6 +224,53 @@ describe('Mappings', function()
     assert.are.same('  - [ ] The checkbox 2', vim.fn.getline(3))
   end)
 
+  it('should toggle the current line into a headline and vice versa', function()
+    helpers.load_file_content({
+      'top level line',
+      '* top level heading',
+      '  simple line',
+      '  - list item',
+      '  * [ ] unfinished checkbox item',
+      '  - [X] finished checkbox item',
+    })
+
+    assert.are.same('top level line', vim.fn.getline(1))
+    assert.are.same('  simple line', vim.fn.getline(3))
+    assert.are.same('  - list item', vim.fn.getline(4))
+    assert.are.same('  * [ ] unfinished checkbox item', vim.fn.getline(5))
+    assert.are.same('  - [X] finished checkbox item', vim.fn.getline(6))
+
+    vim.fn.cursor(1, 1)
+    vim.cmd([[norm ,o*]])
+    assert.are.same('* top level line', vim.fn.getline(1))
+    vim.cmd([[norm ,o*]])
+    assert.are.same('top level line', vim.fn.getline(1))
+
+    vim.fn.cursor(3, 1)
+    vim.cmd([[norm ,o*]])
+    assert.are.same('** simple line', vim.fn.getline(3))
+    vim.cmd([[norm ,o*]])
+    assert.are.same('simple line', vim.fn.getline(3))
+
+    vim.fn.cursor(4, 1)
+    vim.cmd([[norm ,o*]])
+    assert.are.same('** list item', vim.fn.getline(4))
+    vim.cmd([[norm ,o*]])
+    assert.are.same('list item', vim.fn.getline(4))
+
+    vim.fn.cursor(5, 1)
+    vim.cmd([[norm ,o*]])
+    assert.are.same('** TODO unfinished checkbox item', vim.fn.getline(5))
+    vim.cmd([[norm ,o*]])
+    assert.are.same('TODO unfinished checkbox item', vim.fn.getline(5))
+
+    vim.fn.cursor(6, 1)
+    vim.cmd([[norm ,o*]])
+    assert.are.same('** DONE finished checkbox item', vim.fn.getline(6))
+    vim.cmd([[norm ,o*]])
+    assert.are.same('DONE finished checkbox item', vim.fn.getline(6))
+  end)
+
   it('should toggle archive tag on headline (org_toggle_archive_tag)', function()
     helpers.load_file_content({
       '#TITLE: Test',
@@ -335,7 +284,7 @@ describe('Mappings', function()
     vim.fn.cursor(3, 1)
     vim.cmd([[norm ,oA]])
     assert.are.same(
-      '* TODO Test orgmode                                                             :ARCHIVE:',
+      '* TODO Test orgmode                                                    :ARCHIVE:',
       vim.fn.getline(3)
     )
   end)
@@ -404,7 +353,10 @@ describe('Mappings', function()
     vim.fn.cursor(5, 1)
     assert.are.same('** TODO [#A] Test orgmode level 2 :PRIVATE:', vim.fn.getline('.'))
     vim.cmd([[norm <<]])
-    assert.are.same('* TODO [#A] Test orgmode level 2 :PRIVATE:', vim.fn.getline('.'))
+    assert.are.same(
+      '* TODO [#A] Test orgmode level 2                                       :PRIVATE:',
+      vim.fn.getline('.')
+    )
   end)
 
   it('should promote the heading and its subtree (org_promote_subtree)', function()
@@ -434,7 +386,7 @@ describe('Mappings', function()
     assert.are.same({
       '* TODO Test orgmode',
       '  DEADLINE: <2021-07-21 Wed 22:02>',
-      '* TODO [#A] Test orgmode level 2 :PRIVATE:',
+      '* TODO [#A] Test orgmode level 2                                       :PRIVATE:',
       'Some content for level 2',
       '** NEXT [#1] Level 3',
       'Content Level 3',
@@ -448,13 +400,13 @@ describe('Mappings', function()
       '* TODO Test orgmode',
       '  - Regular item',
       '  - Second recular item',
-      '    - Neste item',
+      '    - Nested item',
     })
 
     assert.are.same({
       '  - Regular item',
       '  - Second recular item',
-      '    - Neste item',
+      '    - Nested item',
     }, vim.api.nvim_buf_get_lines(0, 3, 6, false))
     vim.fn.cursor(4, 1)
     vim.cmd([[exe "norm ,\<CR>"]])
@@ -462,7 +414,7 @@ describe('Mappings', function()
       '  - Regular item',
       '  - ',
       '  - Second recular item',
-      '    - Neste item',
+      '    - Nested item',
     }, vim.api.nvim_buf_get_lines(0, 3, 7, false))
   end)
 
@@ -479,13 +431,13 @@ describe('Mappings', function()
       '* TODO Test orgmode',
       '  - Regular item',
       '  - Second recular item',
-      '    - Neste item',
+      '    - Nested item',
     })
 
     assert.are.same({
       '  - Regular item',
       '  - Second recular item',
-      '    - Neste item',
+      '    - Nested item',
     }, vim.api.nvim_buf_get_lines(0, 3, 6, false))
     vim.fn.cursor(4, 1)
     vim.cmd([[exe "norm ,\<CR>"]])
@@ -494,7 +446,7 @@ describe('Mappings', function()
       '',
       '  - ',
       '  - Second recular item',
-      '    - Neste item',
+      '    - Nested item',
     }, vim.api.nvim_buf_get_lines(0, 3, 8, false))
     config:extend({
       org_blank_before_new_entry = {
@@ -706,17 +658,17 @@ describe('Mappings', function()
         '#TITLE: Test',
         '',
         '* TODO Test orgmode',
-        '  - item',
+        '  * item',
       })
 
       assert.are.same({
-        '  - item',
+        '  * item',
       }, vim.api.nvim_buf_get_lines(0, 3, 4, false))
       vim.fn.cursor(4, 4)
       vim.cmd([[exe "norm ,\<CR>"]])
       assert.are.same({
-        '  - item',
-        '  - ',
+        '  * item',
+        '  * ',
       }, vim.api.nvim_buf_get_lines(0, 3, 5, false))
     end
   )
@@ -726,23 +678,23 @@ describe('Mappings', function()
       '#TITLE: Test',
       '',
       '* TODO Test orgmode',
-      '  - [ ] The checkbox',
-      '  - [X] The checkbox 2',
-      '    - [ ] Nested checkbox',
+      '  * [ ] The checkbox',
+      '  * [X] The checkbox 2',
+      '    * [ ] Nested checkbox',
       'multiple tags content, tags not read from content :FROMCONTENT:',
     })
 
     assert.are.same({
-      '  - [X] The checkbox 2',
-      '    - [ ] Nested checkbox',
+      '  * [X] The checkbox 2',
+      '    * [ ] Nested checkbox',
       'multiple tags content, tags not read from content :FROMCONTENT:',
     }, vim.api.nvim_buf_get_lines(0, 4, 7, false))
     vim.fn.cursor(5, 1)
     vim.cmd([[exe "norm ,\<CR>"]])
     assert.are.same({
-      '  - [X] The checkbox 2',
-      '    - [ ] Nested checkbox',
-      '  - [ ] ',
+      '  * [X] The checkbox 2',
+      '    * [ ] Nested checkbox',
+      '  * [ ] ',
       'multiple tags content, tags not read from content :FROMCONTENT:',
     }, vim.api.nvim_buf_get_lines(0, 4, 8, false))
   end)
@@ -1520,5 +1472,184 @@ describe('Mappings', function()
     assert.are.same('* Test orgmode', vim.fn.getline(1))
     vim.cmd('norm ,o,a\r')
     assert.are.same('* [#A] Test orgmode', vim.fn.getline(1))
+  end)
+
+  it('should refile to headline that matches name exactly', function()
+    local destination_file = helpers.load_file_content({
+      '* foobar',
+      '* baz',
+      '** foo',
+    })
+
+    local source_file = helpers.load_file_content({
+      '* to be refiled',
+      '* not to be refiled',
+    })
+
+    source_file = Files.get_current_file()
+    local item = source_file:get_closest_headline()
+    org.instance().capture:refile_to_headline(destination_file, source_file:get_headline_lines(item), item, 'foo')
+    assert.are.same('* not to be refiled', vim.fn.getline(1))
+    vim.cmd('edit' .. vim.fn.fnameescape(destination_file))
+    assert.are.same({
+      '* foobar',
+      '* baz',
+      '** foo',
+      '*** to be refiled',
+    }, vim.api.nvim_buf_get_lines(0, 0, 5, false))
+  end)
+
+  it('should update the checklist cookies on a headline', function()
+    helpers.load_file_content({
+      '* Test orgmode [/]',
+      '- [ ] checkbox item',
+      '- [ ] checkbox item',
+    })
+    vim.fn.cursor(2, 1)
+    vim.cmd([[exe "norm \<C-space>"]])
+    assert.are.same('* Test orgmode [1/2]', vim.fn.getline(1))
+  end)
+
+  it('should update the checklist cookies on a parent list', function()
+    helpers.load_file_content({
+      '- Test orgmode [/]',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+    })
+    vim.fn.cursor(2, 1)
+    vim.cmd([[exe "norm \<C-space>"]])
+    assert.are.same('- Test orgmode [1/2]', vim.fn.getline(1))
+  end)
+
+  it('should update the checklist cookies with a percentage within a headline', function()
+    helpers.load_file_content({
+      '* Test orgmode [%]',
+      '- [ ] checkbox item',
+      '- [ ] checkbox item',
+    })
+    vim.fn.cursor(2, 1)
+    vim.cmd([[exe "norm \<C-space>"]])
+    assert.are.same('* Test orgmode [50%]', vim.fn.getline(1))
+  end)
+
+  it('should update the checklist cookies with a percentage within a nested list', function()
+    helpers.load_file_content({
+      '- Test orgmode [%]',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+    })
+    vim.fn.cursor(2, 1)
+    vim.cmd([[exe "norm \<C-space>"]])
+    assert.are.same('- Test orgmode [33%]', vim.fn.getline(1))
+  end)
+
+  it('should update the checklist cookies with when the cookie is not the first entry', function()
+    helpers.load_file_content({
+      '- Test orgmode',
+      '- listitem with cookie [%]',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+    })
+    vim.fn.cursor(3, 1)
+    vim.cmd([[exe "norm \<C-space>"]])
+    assert.are.same('- listitem with cookie [33%]', vim.fn.getline(2))
+  end)
+
+  it('should update the checklist cookies with when there are more than 9 items', function()
+    helpers.load_file_content({
+      '- Test orgmode [0/10]',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item',
+    })
+    vim.fn.cursor(3, 1)
+    vim.cmd([[exe "norm \<C-space>"]])
+    assert.are.same('- Test orgmode [1/10]', vim.fn.getline(1))
+  end)
+
+  it('should update nested cookies and checkboxes', function()
+    helpers.load_file_content({
+      '- [ ] Test orgmode [/]',
+      '  - [ ] checkbox item',
+      '  - [ ] checkbox item [/]',
+      '    - [ ] checkbox item',
+      '    - [ ] checkbox item',
+      '  - [ ] checkbox item',
+    })
+    vim.fn.cursor(4, 1)
+    vim.cmd([[exe "norm \<C-space>"]])
+    assert.are.same({
+      '- [ ] Test orgmode [0/3]',
+      '  - [ ] checkbox item',
+      '  - [-] checkbox item [1/2]',
+      '    - [X] checkbox item',
+      '    - [ ] checkbox item',
+      '  - [ ] checkbox item',
+    }, vim.api.nvim_buf_get_lines(0, 0, 6, false))
+    vim.fn.cursor(5, 1)
+    vim.cmd([[exe "norm \<C-space>"]])
+    assert.are.same({
+      '- [-] Test orgmode [1/3]',
+      '  - [ ] checkbox item',
+      '  - [X] checkbox item [2/2]',
+      '    - [X] checkbox item',
+      '    - [X] checkbox item',
+      '  - [ ] checkbox item',
+    }, vim.api.nvim_buf_get_lines(0, 0, 6, false))
+  end)
+
+  it('should update headline cookies when updating checkboxes', function()
+    helpers.load_file_content({
+      '* Test orgmode [/]',
+      '- [ ] checkbox item',
+      '- [-] checkbox item [1/2]',
+      '  - [ ] checkbox item',
+      '  - [X] checkbox item',
+      '- [ ] checkbox item',
+    })
+    vim.fn.cursor(4, 1)
+    vim.cmd([[exe "norm \<C-space>"]])
+    assert.are.same({
+      '* Test orgmode [1/3]',
+      '- [ ] checkbox item',
+      '- [X] checkbox item [2/2]',
+      '  - [X] checkbox item',
+      '  - [X] checkbox item',
+      '- [ ] checkbox item',
+    }, vim.api.nvim_buf_get_lines(0, 0, 6, false))
+  end)
+
+  it('should respect custom  mapping prefix', function()
+    config:extend({
+      mappings = {
+        prefix = '<Leader>f',
+      },
+    })
+
+    helpers.load_file_content({
+      '* DONE top level todo :WORK:',
+      'content for top level todo',
+    })
+    assert.are.same({
+      '* DONE top level todo :WORK:',
+      'content for top level todo',
+    }, vim.api.nvim_buf_get_lines(0, 0, 2, false))
+    vim.fn.cursor(3, 1)
+    vim.cmd([[norm ,fit]])
+    assert.are.same({
+      '* DONE top level todo :WORK:',
+      'content for top level todo',
+      '',
+      '* TODO ',
+    }, vim.api.nvim_buf_get_lines(0, 0, 4, false))
   end)
 end)

@@ -1,6 +1,7 @@
 local instance = {}
 local utils = require('orgmode.utils')
 local defaults = require('orgmode.config.defaults')
+---@type table<string, MapEntry>
 local mappings = require('orgmode.config.mappings')
 
 ---@class Config
@@ -14,6 +15,7 @@ function Config:new(opts)
     opts = vim.tbl_deep_extend('force', defaults, opts or {}),
     todo_keywords = nil,
     ts_hl_enabled = nil,
+    old_cr_mapping = nil,
   }
   setmetatable(data, self)
   return data
@@ -68,7 +70,7 @@ end
 function Config:get_all_files()
   local all_filenames = {}
   if self.opts.org_default_notes_file and self.opts.org_default_notes_file ~= '' then
-    local default_full_path = vim.fn.expand(self.opts.org_default_notes_file, ':p')
+    local default_full_path = vim.fn.resolve(vim.fn.expand(self.opts.org_default_notes_file, ':p'))
     table.insert(all_filenames, default_full_path)
   end
   local files = self.opts.org_agenda_files
@@ -80,7 +82,9 @@ function Config:get_all_files()
   end
 
   local all_files = vim.tbl_map(function(file)
-    return vim.fn.glob(vim.fn.fnamemodify(file, ':p'), 0, 1)
+    return vim.tbl_map(function(path)
+      return vim.fn.resolve(path)
+    end, vim.fn.glob(vim.fn.fnamemodify(file, ':p'), 0, 1))
   end, files)
 
   all_files = utils.concat(vim.tbl_flatten(all_files), all_filenames, true)
@@ -141,10 +145,14 @@ function Config:get_todo_keywords()
   end
   local types = { TODO = {}, DONE = {}, ALL = {}, KEYS = {}, FAST_ACCESS = {}, has_fast_access = false }
   local type = 'TODO'
-  for _, word in ipairs(self.opts.org_todo_keywords) do
+  local has_separator = vim.tbl_contains(self.opts.org_todo_keywords, '|')
+  for i, word in ipairs(self.opts.org_todo_keywords) do
     if word == '|' then
       type = 'DONE'
     else
+      if not has_separator and i == #self.opts.org_todo_keywords then
+        type = 'DONE'
+      end
       local data = parse_todo(word)
       if not types.has_fast_access and data.custom_shortcut then
         types.has_fast_access = true
@@ -163,72 +171,32 @@ function Config:get_todo_keywords()
       })
     end
   end
-  if #types.DONE == 0 then
-    types.DONE = { table.remove(types.TODO, #types.TODO) }
-  end
   self.todo_keywords = types
   return types
 end
 
-function Config:setup_mappings(category)
+function Config:setup_mappings(category, bufnr)
+  if not self.old_cr_mapping then
+    self.old_cr_mapping = vim.fn.maparg('<CR>', 'i', false, true)
+  end
   if self.opts.mappings.disable_all then
     return
   end
-  if not category then
-    local agenda_keys = self.opts.mappings.global.org_agenda
-    if type(agenda_keys) == 'string' then
-      agenda_keys = { agenda_keys }
-    end
 
-    for _, k in ipairs(agenda_keys) do
-      utils.keymap('n', k, '<cmd>lua require("orgmode").action("agenda.prompt")<CR>')
-    end
-
-    local capture_keys = self.opts.mappings.global.org_capture
-    if type(capture_keys) == 'string' then
-      capture_keys = { capture_keys }
-    end
-
-    for _, k in ipairs(capture_keys) do
-      utils.keymap('n', k, '<cmd>lua require("orgmode").action("capture.prompt")<CR>')
-    end
-
-    return
-  end
-  if not self.opts.mappings[category] then
-    return
+  local map_entries = mappings[category]
+  local default_mappings = defaults.mappings[category] or {}
+  local user_mappings = vim.tbl_get(self.opts.mappings, category) or {}
+  local opts = {}
+  if bufnr then
+    opts.buffer = bufnr
   end
 
-  for name, key in pairs(self.opts.mappings[category]) do
-    if mappings[category] and mappings[category][name] then
-      local map = vim.tbl_map(function(i)
-        return string.format('"%s"', i)
-      end, mappings[category][name])
-      local keys = key
-      if type(keys) == 'string' then
-        keys = { keys }
-      end
-      for _, k in ipairs(keys) do
-        utils.buf_keymap(
-          0,
-          'n',
-          k,
-          string.format('<cmd>lua require("orgmode").action(%s)<CR>', table.concat(map, ', '))
-        )
-      end
-    end
+  if self.opts.mappings.prefix then
+    opts.prefix = self.opts.mappings.prefix
   end
-end
 
-function Config:setup_text_object_mappings()
-  if self.opts.mappings.disable_all then
-    return
-  end
-  for name, key in pairs(self.opts.mappings.text_objects) do
-    if mappings.text_objects[name] then
-      utils.buf_keymap(0, 'x', key, string.format(':<C-U>lua require("orgmode.org.text_objects").%s()<CR>', name))
-      utils.buf_keymap(0, 'o', key, string.format(':normal v%s<CR>', key))
-    end
+  for name, map_entry in pairs(map_entries) do
+    map_entry:attach(default_mappings[name], user_mappings[name], opts)
   end
 end
 
@@ -242,7 +210,10 @@ function Config:parse_archive_location(file, archive_loc)
   local parts = vim.split(archive_loc, '::')
   local archive_location = vim.trim(parts[1])
   if archive_location:find('%%s') then
-    return string.format(archive_location, file)
+    local file_path = vim.fn.fnamemodify(file, ':p:h')
+    local file_name = vim.fn.fnamemodify(file, ':t')
+    local archive_filename = string.format(archive_location, file_name)
+    return string.format('%s/%s', file_path, archive_filename)
   end
   return vim.fn.fnamemodify(archive_location, ':p')
 end
@@ -270,9 +241,19 @@ function Config:ts_highlights_enabled()
   end
   self.ts_hl_enabled = false
   local hl_module = require('nvim-treesitter.configs').get_module('highlight')
-  if hl_module and hl_module.enable and not vim.tbl_contains(hl_module.disable or {}, 'org') then
-    self.ts_hl_enabled = true
+  if not hl_module or not hl_module.enable then
+    return false
   end
+  if hl_module.disable then
+    if type(hl_module.disable) == 'function' and hl_module.disable('org', vim.api.nvim_get_current_buf()) then
+      return false
+    end
+
+    if type(hl_module.disable) == 'table' and vim.tbl_contains(hl_module.disable, 'org') then
+      return false
+    end
+  end
+  self.ts_hl_enabled = true
   return self.ts_hl_enabled
 end
 
@@ -285,6 +266,13 @@ function Config:respect_blank_before_new_entry(content, option, prepend_content)
     table.insert(content, 1, prepend_content or '')
   end
   return content
+end
+
+function Config:get_indent(amount)
+  if self.opts.org_indent_mode == 'indent' then
+    return string.rep(' ', amount)
+  end
+  return ''
 end
 
 instance = Config:new()

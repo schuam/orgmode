@@ -28,8 +28,8 @@ local time_format = '%H:%M'
 local Date = {}
 
 ---@param source table
----@param target table
----@param include_sec boolean
+---@param target? table
+---@param include_sec? boolean
 ---@return table
 local function set_date_opts(source, target, include_sec)
   target = target or {}
@@ -87,7 +87,7 @@ function Date:from_time_table(time)
   return Date:new(opts)
 end
 
----@param opts table
+---@param opts? table
 ---@return Date
 function Date:set(opts)
   opts = opts or {}
@@ -98,7 +98,7 @@ function Date:set(opts)
   return self:from_time_table(date)
 end
 
----@param opts table
+---@param opts? table
 ---@return Date
 function Date:clone(opts)
   local date = Date:new(self)
@@ -158,7 +158,7 @@ local function parse_date(date, dayname, adjustments, data)
   return Date:new(opts)
 end
 
----@param data table
+---@param data? table
 ---@return Date
 local function today(data)
   local opts = vim.tbl_deep_extend('force', os.date('*t', os.time()), data or {})
@@ -166,7 +166,7 @@ local function today(data)
   return Date:new(opts)
 end
 
----@param data table
+---@param data? table
 ---@return Date
 local function now(data)
   local opts = vim.tbl_deep_extend('force', os.date('*t', os.time()), data or {})
@@ -180,11 +180,11 @@ local function is_valid_date(datestr)
 end
 
 ---@param datestr string
----@param opts table
+---@param opts? table
 ---@return Date
 local function from_string(datestr, opts)
   if not is_valid_date(datestr) then
-    return now().clone(opts)
+    return nil
   end
   local parts = vim.split(datestr, '%s+')
   local date = table.remove(parts, 1)
@@ -211,6 +211,35 @@ local function from_string(datestr, opts)
   end
 
   return parse_date(date, dayname, adjustments, opts)
+end
+
+--- @param datestr string
+--- @return table[]
+local function parse_parts(datestr)
+  local result = {}
+  local counter = 1
+  local patterns = {
+    { type = 'date', rgx = '^%d%d%d%d%-%d%d%-%d%d$' },
+    { type = 'dayname', rgx = '^%a%a%a$' },
+    { type = 'time', rgx = '^%d?%d:%d%d$' },
+    { type = 'time_range', rgx = '^%d?%d:%d%d%-%d?%d:%d%d$' },
+    { type = 'adjustment', rgx = '^[%.%+%-]+%d+[hdwmy]?$' },
+  }
+  for space, item in string.gmatch(datestr, '(%s*)(%S+)') do
+    local from = counter + space:len()
+    for _, dt_pattern in ipairs(patterns) do
+      if item:match(dt_pattern.rgx) then
+        table.insert(result, {
+          type = dt_pattern.type,
+          value = item,
+          from = from,
+          to = from + item:len() - 1,
+        })
+        counter = counter + item:len() + space:len()
+      end
+    end
+  end
+  return result
 end
 
 local function from_org_date(datestr, opts)
@@ -488,7 +517,7 @@ function Date:is_between(from, to, span)
 end
 
 ---@param date Date
----@param span string
+---@param span? string
 ---@return boolean
 function Date:is_before(date, span)
   return not self:is_same_or_after(date, span)
@@ -582,7 +611,7 @@ function Date:format(format)
 end
 
 ---@param from Date
----@param span string
+---@param span? string
 ---@return number
 function Date:diff(from, span)
   span = span or 'day'
@@ -827,7 +856,7 @@ end
 ---@param type? string
 ---@return Date
 local function from_match(line, lnum, open, datetime, close, last_match, type)
-  local search_from = last_match and last_match.range.end_col or 0
+  local search_from = last_match ~= nil and last_match.range.end_col or 0
   local from, to = line:find(vim.pesc(open .. datetime .. close), search_from)
   local is_date_range_end = last_match and last_match.is_date_range_start and line:sub(from - 2, from - 1) == '--'
   local opts = {
@@ -852,18 +881,28 @@ end
 local function parse_all_from_line(line, lnum)
   local dates = {}
   for open, datetime, close in line:gmatch(pattern) do
-    table.insert(dates, from_match(line, lnum, open, datetime, close, dates[#dates]))
+    local parsed_date = from_match(line, lnum, open, datetime, close, dates[#dates])
+    if parsed_date then
+      table.insert(dates, parsed_date)
+    end
   end
   return dates
 end
 
+---@param value any
+local function is_date_instance(value)
+  return getmetatable(value) == Date
+end
+
 return {
+  parse_parts = parse_parts,
   from_org_date = from_org_date,
   from_string = from_string,
   now = now,
   today = today,
   parse_all_from_line = parse_all_from_line,
   is_valid_date = is_valid_date,
+  is_date_instance = is_date_instance,
   from_match = from_match,
   pattern = pattern,
 }

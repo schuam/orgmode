@@ -1,4 +1,6 @@
 _G.orgmode = _G.orgmode or {}
+local ts_revision = 'eb1e080361ad885e3885d1037d9b57f81b579de8'
+local setup_ts_grammar_used = false
 local instance = nil
 
 ---@class Org
@@ -22,8 +24,8 @@ function Org:init()
   if self.initialized then
     return
   end
-  require('orgmode.colors.todo_highlighter').add_todo_keyword_highlights()
-  require('orgmode.colors.hide_leading_stars').setup()
+  require('orgmode.colors.custom_highlighter').setup()
+  require('orgmode.events').init()
   self.files = require('orgmode.parser.files').new()
   self.agenda = require('orgmode.agenda'):new()
   self.capture = require('orgmode.capture'):new()
@@ -45,24 +47,66 @@ function Org:reload(file)
 end
 
 function Org:setup_autocmds()
-  vim.cmd([[augroup orgmode_nvim]])
-  vim.cmd([[autocmd!]])
-  vim.cmd(
-    [[autocmd BufWritePost *.org,*.org_archive call luaeval('require("orgmode").reload(_A)', expand('<afile>:p'))]]
-  )
-  vim.cmd(
-    [[autocmd BufReadPost,BufWritePost *.org,*.org_archive lua require('orgmode.org.diagnostics').print_error_state()]]
-  )
-  vim.cmd([[autocmd FileType org call luaeval('require("orgmode").reload(_A)', expand('<afile>:p'))]])
-  vim.cmd([[autocmd CursorHold,CursorHoldI *.org,*.org_archive lua require('orgmode.org.diagnostics').report()]])
-  vim.cmd([[augroup END]])
-  vim.cmd([[command! OrgDiagnostics lua require('orgmode.org.diagnostics').print()]])
+  local org_augroup = vim.api.nvim_create_augroup('orgmode_nvim', { clear = true })
+  vim.api.nvim_create_autocmd('BufWritePost', {
+    pattern = { '*.org', '*.org_archive' },
+    group = org_augroup,
+    callback = function()
+      require('orgmode').reload(vim.fn.expand('<afile>:p'))
+    end,
+  })
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'org',
+    group = org_augroup,
+    callback = function()
+      require('orgmode').reload(vim.fn.expand('<afile>:p'))
+    end,
+  })
+  vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
+    pattern = { '*.org', '*.org_archive' },
+    group = org_augroup,
+    callback = function()
+      require('orgmode.org.diagnostics').report()
+    end,
+  })
+end
+
+--- @param revision string?
+local function setup_ts_grammar(revision)
+  setup_ts_grammar_used = true
+  local parser_config = require('nvim-treesitter.parsers').get_parser_configs()
+  parser_config.org = {
+    install_info = {
+      url = 'https://github.com/milisims/tree-sitter-org',
+      revision = revision or ts_revision,
+      files = { 'src/parser.c', 'src/scanner.cc' },
+    },
+    filetype = 'org',
+  }
+end
+
+local function check_ts_grammar()
+  vim.defer_fn(function()
+    if setup_ts_grammar_used then
+      return
+    end
+    local parser_config = require('nvim-treesitter.parsers').get_parser_configs()
+    if parser_config and parser_config.org and parser_config.org.install_info.revision ~= ts_revision then
+      require('orgmode.utils').echo_error({
+        'You are using outdated version of tree-sitter grammar for Orgmode.',
+        'To use latest version, replace current grammar installation with "require(\'orgmode\').setup_ts_grammar()" and run :TSUpdate org.',
+        'More info in setup section of readme: https://github.com/nvim-orgmode/orgmode#setup',
+      })
+    end
+  end, 200)
 end
 
 ---@param opts? table
 ---@return Org
 local function setup(opts)
+  opts = opts or {}
   instance = Org:new()
+  check_ts_grammar()
   local config = require('orgmode.config'):extend(opts)
   vim.defer_fn(function()
     if config.notifications.enabled and #vim.api.nvim_list_uis() > 0 then
@@ -70,7 +114,7 @@ local function setup(opts)
         instance.notifications = require('orgmode.notifications'):new():start_timer()
       end))
     end
-    config:setup_mappings()
+    config:setup_mappings('global')
   end, 1)
   return instance
 end
@@ -99,7 +143,8 @@ local function set_dot_repeat(cmd, opts)
   )
 end
 
----@param opts table
+---@param cmd string
+---@param opts? table
 local function action(cmd, opts)
   local parts = vim.split(cmd, '.', true)
   if not instance or #parts < 2 then
@@ -133,6 +178,10 @@ local function cron(opts)
   end))
 end
 
+local function get_instance()
+  return instance
+end
+
 function _G.orgmode.statusline()
   if not instance or not instance.initialized then
     return ''
@@ -141,8 +190,10 @@ function _G.orgmode.statusline()
 end
 
 return {
+  setup_ts_grammar = setup_ts_grammar,
   setup = setup,
   reload = reload,
   action = action,
   cron = cron,
+  instance = get_instance,
 }

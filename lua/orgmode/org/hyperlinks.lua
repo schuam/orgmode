@@ -3,10 +3,7 @@ local utils = require('orgmode.utils')
 local Hyperlinks = {}
 
 local function get_file_from_context(ctx)
-  return (
-      ctx.hyperlinks and ctx.hyperlinks.filepath and Files.get(ctx.hyperlinks.filepath, true)
-      or Files.get_current_file()
-    )
+  return (ctx.hyperlinks and ctx.hyperlinks.filepath and Files.get(ctx.hyperlinks.filepath) or Files.get_current_file())
 end
 
 local function update_hyperlink_ctx(ctx)
@@ -22,7 +19,9 @@ local function update_hyperlink_ctx(ctx)
   }
 
   local file_match = ctx.line:match('file:(.-)::')
-  file_match = file_match and vim.fn.fnamemodify(file_match, ':p') or file_match
+  if file_match then
+    file_match = Hyperlinks.get_file_real_path(file_match)
+  end
 
   if file_match and Files.get(file_match) then
     hyperlinks_ctx.filepath = Files.get(file_match).filename
@@ -41,17 +40,28 @@ end
 function Hyperlinks.find_by_filepath(ctx)
   local filenames = Files.filenames()
   local file_base = ctx.base:gsub('^file:', '')
-  if vim.trim(file_base) ~= '' then
-    filenames = vim.tbl_filter(function(f)
-      return f:find('^' .. file_base)
-    end, filenames)
+  local file_base_no_start_path = file_base:gsub('^%./', '') .. ''
+  local is_relative_path = file_base:match('^%./')
+  local current_file_directory = vim.fn.fnamemodify(utils.current_file_path(), ':p:h')
+  local valid_filenames = {}
+  for _, f in ipairs(filenames) do
+    if is_relative_path then
+      local match = f:match('^' .. current_file_directory .. '/(' .. file_base_no_start_path .. '[^/]*%.org)$')
+      if match then
+        table.insert(valid_filenames, './' .. match)
+      end
+    else
+      if f:find('^' .. file_base) then
+        table.insert(valid_filenames, f)
+      end
+    end
   end
 
   -- Outer checks already filter cases where `ctx.skip_add_prefix` is truthy,
   -- so no need to check it here
   return vim.tbl_map(function(path)
     return 'file:' .. path
-  end, filenames)
+  end, valid_filenames)
 end
 
 function Hyperlinks.find_by_custom_id_property(ctx)
@@ -67,7 +77,7 @@ end
 
 function Hyperlinks.find_by_title_pointer(ctx)
   local file = get_file_from_context(ctx)
-  local headlines = file:find_headlines_by_title(ctx.base:sub(2))
+  local headlines = file:find_headlines_by_title(ctx.base:sub(2), false)
   if ctx.skip_add_prefix then
     return headlines
   end
@@ -103,7 +113,7 @@ function Hyperlinks.find_by_title(ctx)
   if not ctx.base or ctx.base == '' then
     return {}
   end
-  local headlines = Files.get_current_file():find_headlines_by_title(ctx.base)
+  local headlines = Files.get_current_file():find_headlines_by_title(ctx.base, false)
   if ctx.skip_add_prefix then
     return headlines
   end
@@ -133,6 +143,16 @@ function Hyperlinks.find_matching_links(ctx)
   local results = Hyperlinks.find_by_dedicated_target(ctx)
   local all = utils.concat(results, Hyperlinks.find_by_title(ctx))
   return all
+end
+
+function Hyperlinks.get_file_real_path(url_path)
+  local path = url_path
+  path = path:gsub('^file:', '')
+  if path:match('^/') then
+    return path
+  end
+  path = path:gsub('^./', '')
+  return vim.fn.fnamemodify(utils.current_file_path(), ':p:h') .. '/' .. path
 end
 
 return Hyperlinks

@@ -1,6 +1,5 @@
 local Files = require('orgmode.parser.files')
 local Table = require('orgmode.parser.table')
-local Range = require('orgmode.parser.range')
 local Duration = require('orgmode.objects.duration')
 
 ---@class ClockReport
@@ -29,9 +28,9 @@ end
 function ClockReport:draw_for_agenda(start_line)
   local data = {
     { 'File', 'Headline', 'Time' },
-    {},
+    'hr',
     { '', 'ALL Total time', self.total_duration:to_string() },
-    {},
+    'hr',
   }
 
   for _, file in ipairs(self.files) do
@@ -43,7 +42,7 @@ function ClockReport:draw_for_agenda(start_line)
         headline.logbook:get_total(self.from, self.to):to_string(),
       })
     end
-    table.insert(data, {})
+    table.insert(data, 'hr')
   end
 
   local clock_table = Table.from_list(data, start_line):compile()

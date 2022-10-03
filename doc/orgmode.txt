@@ -6,175 +6,205 @@ orgmode.txt                                             *orgmode* *orgmode.nvim*
 CONTENTS                                                        *orgmode-contents*
 
 1. Table of content.....................................|orgmode-table_of_content|
-    1.1. Settings...............................................|orgmode-settings|
-        1.1.1. Global settings...........................|orgmode-global_settings|
-            1.1.1.1. org_agenda_files...................|orgmode-org_agenda_files|
-            1.1.1.2. org_default_notes_file.......|orgmode-org_default_notes_file|
-            1.1.1.3. org_todo_keywords.................|orgmode-org_todo_keywords|
-            1.1.1.4. diagnostics.............................|orgmode-diagnostics|
-            1.1.1.5. org_todo_keyword_faces.......|orgmode-org_todo_keyword_faces|
-            1.1.1.6. org_archive_location...........|orgmode-org_archive_location|
-            1.1.1.7. org_hide_leading_stars.......|orgmode-org_hide_leading_stars|
-            1.1.1.8. org_hide_emphasis_markers.|orgmode-org_hide_emphasis_markers|
-            1.1.1.9. org_ellipsis...........................|orgmode-org_ellipsis|
-            1.1.1.10. org_log_done..........................|orgmode-org_log_done|
-            1.1.1.11. org_highlight_latex_and_related.|orgmode-org_highlight_latex_and_related|
-            1.1.1.12. org_indent_mode....................|orgmode-org_indent_mode|
-            1.1.1.13. org_custom_exports..............|orgmode-org_custom_exports|
-            1.1.1.14. org_time_stamp_rounding_minutes.|orgmode-org_time_stamp_rounding_minutes|
-            1.1.1.15. org_blank_before_new_entry.|orgmode-org_blank_before_new_entry|
-        1.1.2. Agenda settings...........................|orgmode-agenda_settings|
-            1.1.2.1. org_deadline_warning_days.|orgmode-org_deadline_warning_days|
-            1.1.2.2. org_agenda_span.....................|orgmode-org_agenda_span|
-            1.1.2.3. org_agenda_start_on_weekday.|orgmode-org_agenda_start_on_weekday|
-            1.1.2.4. org_agenda_start_day...........|orgmode-org_agenda_start_day|
-            1.1.2.5. org_agenda_templates...........|orgmode-org_agenda_templates|
-            1.1.2.6. org_agenda_min_height.........|orgmode-org_agenda_min_height|
-            1.1.2.7. org_priority_highest...........|orgmode-org_priority_highest|
-            1.1.2.8. org_priority_default...........|orgmode-org_priority_default|
-            1.1.2.9. org_priority_lowest.............|orgmode-org_priority_lowest|
-            1.1.2.10. org_agenda_skip_scheduled_if_done.|orgmode-org_agenda_skip_scheduled_if_done|
-            1.1.2.11. org_agenda_skip_deadline_if_done.|orgmode-org_agenda_skip_deadline_if_done|
-            1.1.2.12. org_agenda_text_search_extra_files.|orgmode-org_agenda_text_search_extra_files|
-        1.1.3. Tags settings...............................|orgmode-tags_settings|
-            1.1.3.1. org_use_tag_inheritance.....|orgmode-org_use_tag_inheritance|
-            1.1.3.2. org_tags_exclude_from_inheritance.|orgmode-org_tags_exclude_from_inheritance|
-    1.2. Mappings...............................................|orgmode-mappings|
-        1.2.1. Global mappings...........................|orgmode-global_mappings|
-            1.2.1.1. org_agenda...............................|orgmode-org_agenda|
-            1.2.1.2. org_capture.............................|orgmode-org_capture|
-        1.2.2. Agenda mappings...........................|orgmode-agenda_mappings|
-            1.2.2.1. org_agenda_later...................|orgmode-org_agenda_later|
-            1.2.2.2. org_agenda_earlier...............|orgmode-org_agenda_earlier|
-            1.2.2.3. org_agenda_goto_today.........|orgmode-org_agenda_goto_today|
-            1.2.2.4. org_agenda_day_view.............|orgmode-org_agenda_day_view|
-            1.2.2.5. org_agenda_week_view...........|orgmode-org_agenda_week_view|
-            1.2.2.6. org_agenda_month_view.........|orgmode-org_agenda_month_view|
-            1.2.2.7. org_agenda_year_view...........|orgmode-org_agenda_year_view|
-            1.2.2.8. org_agenda_quit.....................|orgmode-org_agenda_quit|
-            1.2.2.9. org_agenda_switch_to...........|orgmode-org_agenda_switch_to|
-            1.2.2.10. org_agenda_goto....................|orgmode-org_agenda_goto|
-            1.2.2.11. org_agenda_goto_date..........|orgmode-org_agenda_goto_date|
-            1.2.2.12. org_agenda_redo....................|orgmode-org_agenda_redo|
-            1.2.2.13. org_agenda_todo....................|orgmode-org_agenda_todo|
-            1.2.2.14. org_agenda_clock_in............|orgmode-org_agenda_clock_in|
-            1.2.2.15. org_agenda_clock_out..........|orgmode-org_agenda_clock_out|
-            1.2.2.16. org_agenda_clock_cancel....|orgmode-org_agenda_clock_cancel|
-            1.2.2.17. org_agenda_clock_goto........|orgmode-org_agenda_clock_goto|
-            1.2.2.18. org_agenda_clockreport_mode.|orgmode-org_agenda_clockreport_mode|
-            1.2.2.19. org_agenda_priority............|orgmode-org_agenda_priority|
-            1.2.2.20. org_agenda_priority_up......|orgmode-org_agenda_priority_up|
-            1.2.2.21. org_agenda_priority_down..|orgmode-org_agenda_priority_down|
-            1.2.2.22. org_agenda_toggle_archive_tag.|orgmode-org_agenda_toggle_archive_tag|
-            1.2.2.23. org_agenda_set_tags............|orgmode-org_agenda_set_tags|
-            1.2.2.24. org_agenda_deadline............|orgmode-org_agenda_deadline|
-            1.2.2.25. org_agenda_schedule............|orgmode-org_agenda_schedule|
-            1.2.2.26. org_agenda_filter................|orgmode-org_agenda_filter|
-            1.2.2.27. org_agenda_show_help..........|orgmode-org_agenda_show_help|
-        1.2.3. Capture mappings.........................|orgmode-capture_mappings|
-            1.2.3.1. org_capture_finalize...........|orgmode-org_capture_finalize|
-            1.2.3.2. org_capture_refile...............|orgmode-org_capture_refile|
-            1.2.3.3. org_capture_kill...................|orgmode-org_capture_kill|
-            1.2.3.4. org_capture_show_help.........|orgmode-org_capture_show_help|
-        1.2.4. Org mappings.................................|orgmode-org_mappings|
-            1.2.4.1. org_refile...............................|orgmode-org_refile|
-            1.2.4.2. org_timestamp_up...................|orgmode-org_timestamp_up|
-            1.2.4.3. org_timestamp_down...............|orgmode-org_timestamp_down|
-            1.2.4.4. org_timestamp_up_day...........|orgmode-org_timestamp_up_day|
-            1.2.4.5. org_timestamp_down_day.......|orgmode-org_timestamp_down_day|
-            1.2.4.6. org_change_date.....................|orgmode-org_change_date|
-            1.2.4.7. org_priority...........................|orgmode-org_priority|
-            1.2.4.8. org_priority_up.....................|orgmode-org_priority_up|
-            1.2.4.9. org_priority_down.................|orgmode-org_priority_down|
-            1.2.4.10. org_todo..................................|orgmode-org_todo|
-            1.2.4.11. org_todo_prev........................|orgmode-org_todo_prev|
-            1.2.4.12. org_toggle_checkbox............|orgmode-org_toggle_checkbox|
-            1.2.4.13. org_open_at_point................|orgmode-org_open_at_point|
-            1.2.4.14. org_cycle................................|orgmode-org_cycle|
-            1.2.4.15. org_global_cycle..................|orgmode-org_global_cycle|
-            1.2.4.16. org_archive_subtree............|orgmode-org_archive_subtree|
-            1.2.4.17. org_set_tags_command..........|orgmode-org_set_tags_command|
-            1.2.4.18. org_toggle_archive_tag......|orgmode-org_toggle_archive_tag|
-            1.2.4.19. org_do_promote......................|orgmode-org_do_promote|
-            1.2.4.20. org_do_demote........................|orgmode-org_do_demote|
-            1.2.4.21. org_promote_subtree............|orgmode-org_promote_subtree|
-            1.2.4.22. org_demote_subtree..............|orgmode-org_demote_subtree|
-            1.2.4.23. org_meta_return....................|orgmode-org_meta_return|
-            1.2.4.24. org_insert_heading_respect_content.|orgmode-org_insert_heading_respect_content|
-            1.2.4.25. org_insert_todo_heading....|orgmode-org_insert_todo_heading|
-            1.2.4.26. org_insert_todo_heading_respect_content.|orgmode-org_insert_todo_heading_respect_content|
-            1.2.4.27. org_move_subtree_up............|orgmode-org_move_subtree_up|
-            1.2.4.28. org_move_subtree_down........|orgmode-org_move_subtree_down|
-            1.2.4.29. org_export..............................|orgmode-org_export|
-            1.2.4.30. org_next_visible_heading..|orgmode-org_next_visible_heading|
-            1.2.4.31. org_previous_visible_heading.|orgmode-org_previous_visible_heading|
-            1.2.4.32. org_forward_heading_same_level.|orgmode-org_forward_heading_same_level|
-            1.2.4.33. org_backward_heading_same_level.|orgmode-org_backward_heading_same_level|
-            1.2.4.34. outline_up_heading..............|orgmode-outline_up_heading|
-            1.2.4.35. org_deadline..........................|orgmode-org_deadline|
-            1.2.4.36. org_schedule..........................|orgmode-org_schedule|
-            1.2.4.37. org_time_stamp......................|orgmode-org_time_stamp|
-            1.2.4.38. org_time_stamp_inactive....|orgmode-org_time_stamp_inactive|
-            1.2.4.39. org_clock_in..........................|orgmode-org_clock_in|
-            1.2.4.40. org_clock_out........................|orgmode-org_clock_out|
-            1.2.4.41. org_clock_cancel..................|orgmode-org_clock_cancel|
-            1.2.4.42. org_clock_goto......................|orgmode-org_clock_goto|
-            1.2.4.43. org_set_effort......................|orgmode-org_set_effort|
-            1.2.4.44. org_show_help........................|orgmode-org_show_help|
-        1.2.5. Text objects.................................|orgmode-text_objects|
-            1.2.5.1. inner_heading.........................|orgmode-inner_heading|
-            1.2.5.2. around_heading.......................|orgmode-around_heading|
-            1.2.5.3. inner_subtree.........................|orgmode-inner_subtree|
-            1.2.5.4. around_subtree.......................|orgmode-around_subtree|
-            1.2.5.5. inner_heading_from_root.....|orgmode-inner_heading_from_root|
-            1.2.5.6. around_heading_from_root...|orgmode-around_heading_from_root|
-            1.2.5.7. inner_subtree_from_root.....|orgmode-inner_subtree_from_root|
-            1.2.5.8. around_subtree_from_root...|orgmode-around_subtree_from_root|
-        1.2.6. Dot repeat.....................................|orgmode-dot_repeat|
-    1.3. Document Diagnostics.......................|orgmode-document_diagnostics|
-    1.4. Autocompletion...................................|orgmode-autocompletion|
-    1.5. Abbreviations.....................................|orgmode-abbreviations|
-    1.6. Colors...................................................|orgmode-colors|
-        1.6.1. Highlight Groups.........................|orgmode-highlight_groups|
-    1.7. Advanced search.................................|orgmode-advanced_search|
-    1.8. Notifications (experimental).......|orgmode-notifications_(experimental)|
-        1.8.1. Cron.................................................|orgmode-cron|
-    1.9. Clocking...............................................|orgmode-clocking|
-                1.9.1. Clock in.................................|orgmode-clock_in|
-                1.9.2. Clock out...............................|orgmode-clock_out|
-                1.9.3. Clock cancel.........................|orgmode-clock_cancel|
-                1.9.4. Clock goto.............................|orgmode-clock_goto|
-                1.9.5. Set effort.............................|orgmode-set_effort|
-                1.9.6. Clock report table.............|orgmode-clock_report_table|
-                1.9.7. Automatic updates of totals.|orgmode-automatic_updates_of_totals|
-                1.9.8. Recalculating totals.........|orgmode-recalculating_totals|
-                1.9.9. Statusline function...........|orgmode-statusline_function|
-    1.10. Changelog............................................|orgmode-changelog|
-            1.10.1. 24 October 2021......................|orgmode-24_october_2021|
-            1.10.2. 10 October 2021......................|orgmode-10_october_2021|
+    1.1. Getting started with Orgmode.......|orgmode-getting_started_with_orgmode|
+    1.2. Settings...............................................|orgmode-settings|
+        1.2.1. Global settings...........................|orgmode-global_settings|
+            1.2.1.1. org_agenda_files...................|orgmode-org_agenda_files|
+            1.2.1.2. org_default_notes_file.......|orgmode-org_default_notes_file|
+            1.2.1.3. org_todo_keywords.................|orgmode-org_todo_keywords|
+            1.2.1.4. diagnostics.............................|orgmode-diagnostics|
+            1.2.1.5. win_split_mode.......................|orgmode-win_split_mode|
+            1.2.1.6. org_todo_keyword_faces.......|orgmode-org_todo_keyword_faces|
+            1.2.1.7. org_archive_location...........|orgmode-org_archive_location|
+            1.2.1.8. org_hide_leading_stars.......|orgmode-org_hide_leading_stars|
+            1.2.1.9. org_hide_emphasis_markers.|orgmode-org_hide_emphasis_markers|
+            1.2.1.10. org_ellipsis..........................|orgmode-org_ellipsis|
+            1.2.1.11. org_log_done..........................|orgmode-org_log_done|
+            1.2.1.12. org_highlight_latex_and_related.|orgmode-org_highlight_latex_and_related|
+            1.2.1.13. org_indent_mode....................|orgmode-org_indent_mode|
+            1.2.1.14. org_src_window_setup..........|orgmode-org_src_window_setup|
+            1.2.1.15. org_edit_src_content_indentation.|orgmode-org_edit_src_content_indentation|
+            1.2.1.16. org_custom_exports..............|orgmode-org_custom_exports|
+            1.2.1.17. org_time_stamp_rounding_minutes.|orgmode-org_time_stamp_rounding_minutes|
+            1.2.1.18. org_blank_before_new_entry.|orgmode-org_blank_before_new_entry|
+            1.2.1.19. calendar_week_start_day....|orgmode-calendar_week_start_day|
+            1.2.1.20. emacs_config..........................|orgmode-emacs_config|
+        1.2.2. Agenda settings...........................|orgmode-agenda_settings|
+            1.2.2.1. org_deadline_warning_days.|orgmode-org_deadline_warning_days|
+            1.2.2.2. org_agenda_span.....................|orgmode-org_agenda_span|
+            1.2.2.3. org_agenda_start_on_weekday.|orgmode-org_agenda_start_on_weekday|
+            1.2.2.4. org_agenda_start_day...........|orgmode-org_agenda_start_day|
+            1.2.2.5. org_capture_templates.........|orgmode-org_capture_templates|
+            1.2.2.6. org_agenda_min_height.........|orgmode-org_agenda_min_height|
+            1.2.2.7. org_priority_highest...........|orgmode-org_priority_highest|
+            1.2.2.8. org_priority_default...........|orgmode-org_priority_default|
+            1.2.2.9. org_priority_lowest.............|orgmode-org_priority_lowest|
+            1.2.2.10. org_agenda_skip_scheduled_if_done.|orgmode-org_agenda_skip_scheduled_if_done|
+            1.2.2.11. org_agenda_skip_deadline_if_done.|orgmode-org_agenda_skip_deadline_if_done|
+            1.2.2.12. org_agenda_text_search_extra_files.|orgmode-org_agenda_text_search_extra_files|
+        1.2.3. Tags settings...............................|orgmode-tags_settings|
+            1.2.3.1. org_tags_column.....................|orgmode-org_tags_column|
+            1.2.3.2. org_use_tag_inheritance.....|orgmode-org_use_tag_inheritance|
+            1.2.3.3. org_tags_exclude_from_inheritance.|orgmode-org_tags_exclude_from_inheritance|
+    1.3. Mappings...............................................|orgmode-mappings|
+        1.3.1. Global mappings...........................|orgmode-global_mappings|
+            1.3.1.1. org_agenda...............................|orgmode-org_agenda|
+            1.3.1.2. org_capture.............................|orgmode-org_capture|
+        1.3.2. Agenda mappings...........................|orgmode-agenda_mappings|
+            1.3.2.1. org_agenda_later...................|orgmode-org_agenda_later|
+            1.3.2.2. org_agenda_earlier...............|orgmode-org_agenda_earlier|
+            1.3.2.3. org_agenda_goto_today.........|orgmode-org_agenda_goto_today|
+            1.3.2.4. org_agenda_day_view.............|orgmode-org_agenda_day_view|
+            1.3.2.5. org_agenda_week_view...........|orgmode-org_agenda_week_view|
+            1.3.2.6. org_agenda_month_view.........|orgmode-org_agenda_month_view|
+            1.3.2.7. org_agenda_year_view...........|orgmode-org_agenda_year_view|
+            1.3.2.8. org_agenda_quit.....................|orgmode-org_agenda_quit|
+            1.3.2.9. org_agenda_switch_to...........|orgmode-org_agenda_switch_to|
+            1.3.2.10. org_agenda_goto....................|orgmode-org_agenda_goto|
+            1.3.2.11. org_agenda_goto_date..........|orgmode-org_agenda_goto_date|
+            1.3.2.12. org_agenda_redo....................|orgmode-org_agenda_redo|
+            1.3.2.13. org_agenda_todo....................|orgmode-org_agenda_todo|
+            1.3.2.14. org_agenda_clock_in............|orgmode-org_agenda_clock_in|
+            1.3.2.15. org_agenda_clock_out..........|orgmode-org_agenda_clock_out|
+            1.3.2.16. org_agenda_clock_cancel....|orgmode-org_agenda_clock_cancel|
+            1.3.2.17. org_agenda_clock_goto........|orgmode-org_agenda_clock_goto|
+            1.3.2.18. org_agenda_clockreport_mode.|orgmode-org_agenda_clockreport_mode|
+            1.3.2.19. org_agenda_priority............|orgmode-org_agenda_priority|
+            1.3.2.20. org_agenda_priority_up......|orgmode-org_agenda_priority_up|
+            1.3.2.21. org_agenda_priority_down..|orgmode-org_agenda_priority_down|
+            1.3.2.22. org_agenda_archive..............|orgmode-org_agenda_archive|
+            1.3.2.23. org_agenda_toggle_archive_tag.|orgmode-org_agenda_toggle_archive_tag|
+            1.3.2.24. org_agenda_set_tags............|orgmode-org_agenda_set_tags|
+            1.3.2.25. org_agenda_deadline............|orgmode-org_agenda_deadline|
+            1.3.2.26. org_agenda_schedule............|orgmode-org_agenda_schedule|
+            1.3.2.27. org_agenda_filter................|orgmode-org_agenda_filter|
+            1.3.2.28. org_agenda_show_help..........|orgmode-org_agenda_show_help|
+        1.3.3. Capture mappings.........................|orgmode-capture_mappings|
+            1.3.3.1. org_capture_finalize...........|orgmode-org_capture_finalize|
+            1.3.3.2. org_capture_refile...............|orgmode-org_capture_refile|
+            1.3.3.3. org_capture_kill...................|orgmode-org_capture_kill|
+            1.3.3.4. org_capture_show_help.........|orgmode-org_capture_show_help|
+        1.3.4. Org mappings.................................|orgmode-org_mappings|
+            1.3.4.1. org_refile...............................|orgmode-org_refile|
+            1.3.4.2. org_timestamp_up...................|orgmode-org_timestamp_up|
+            1.3.4.3. org_timestamp_down...............|orgmode-org_timestamp_down|
+            1.3.4.4. org_timestamp_up_day...........|orgmode-org_timestamp_up_day|
+            1.3.4.5. org_timestamp_down_day.......|orgmode-org_timestamp_down_day|
+            1.3.4.6. org_change_date.....................|orgmode-org_change_date|
+            1.3.4.7. org_priority...........................|orgmode-org_priority|
+            1.3.4.8. org_priority_up.....................|orgmode-org_priority_up|
+            1.3.4.9. org_priority_down.................|orgmode-org_priority_down|
+            1.3.4.10. org_todo..................................|orgmode-org_todo|
+            1.3.4.11. org_todo_prev........................|orgmode-org_todo_prev|
+            1.3.4.12. org_toggle_checkbox............|orgmode-org_toggle_checkbox|
+            1.3.4.13. org_toggle_heading..............|orgmode-org_toggle_heading|
+            1.3.4.14. org_open_at_point................|orgmode-org_open_at_point|
+            1.3.4.15. org_edit_special..................|orgmode-org_edit_special|
+            1.3.4.16. org_cycle................................|orgmode-org_cycle|
+            1.3.4.17. org_global_cycle..................|orgmode-org_global_cycle|
+            1.3.4.18. org_archive_subtree............|orgmode-org_archive_subtree|
+            1.3.4.19. org_set_tags_command..........|orgmode-org_set_tags_command|
+            1.3.4.20. org_toggle_archive_tag......|orgmode-org_toggle_archive_tag|
+            1.3.4.21. org_do_promote......................|orgmode-org_do_promote|
+            1.3.4.22. org_do_demote........................|orgmode-org_do_demote|
+            1.3.4.23. org_promote_subtree............|orgmode-org_promote_subtree|
+            1.3.4.24. org_demote_subtree..............|orgmode-org_demote_subtree|
+            1.3.4.25. org_meta_return....................|orgmode-org_meta_return|
+            1.3.4.26. org_insert_heading_respect_content.|orgmode-org_insert_heading_respect_content|
+            1.3.4.27. org_insert_todo_heading....|orgmode-org_insert_todo_heading|
+            1.3.4.28. org_insert_todo_heading_respect_content.|orgmode-org_insert_todo_heading_respect_content|
+            1.3.4.29. org_move_subtree_up............|orgmode-org_move_subtree_up|
+            1.3.4.30. org_move_subtree_down........|orgmode-org_move_subtree_down|
+            1.3.4.31. org_export..............................|orgmode-org_export|
+            1.3.4.32. org_next_visible_heading..|orgmode-org_next_visible_heading|
+            1.3.4.33. org_previous_visible_heading.|orgmode-org_previous_visible_heading|
+            1.3.4.34. org_forward_heading_same_level.|orgmode-org_forward_heading_same_level|
+            1.3.4.35. org_backward_heading_same_level.|orgmode-org_backward_heading_same_level|
+            1.3.4.36. outline_up_heading..............|orgmode-outline_up_heading|
+            1.3.4.37. org_deadline..........................|orgmode-org_deadline|
+            1.3.4.38. org_schedule..........................|orgmode-org_schedule|
+            1.3.4.39. org_time_stamp......................|orgmode-org_time_stamp|
+            1.3.4.40. org_time_stamp_inactive....|orgmode-org_time_stamp_inactive|
+            1.3.4.41. org_clock_in..........................|orgmode-org_clock_in|
+            1.3.4.42. org_clock_out........................|orgmode-org_clock_out|
+            1.3.4.43. org_clock_cancel..................|orgmode-org_clock_cancel|
+            1.3.4.44. org_clock_goto......................|orgmode-org_clock_goto|
+            1.3.4.45. org_set_effort......................|orgmode-org_set_effort|
+            1.3.4.46. org_show_help........................|orgmode-org_show_help|
+        1.3.5. Edit Src.........................................|orgmode-edit_src|
+            1.3.5.1. org_edit_src_abort...............|orgmode-org_edit_src_abort|
+            1.3.5.2. org_edit_src_save.................|orgmode-org_edit_src_save|
+            1.3.5.3. org_edit_src_show_help.......|orgmode-org_edit_src_show_help|
+        1.3.6. Text objects.................................|orgmode-text_objects|
+            1.3.6.1. inner_heading.........................|orgmode-inner_heading|
+            1.3.6.2. around_heading.......................|orgmode-around_heading|
+            1.3.6.3. inner_subtree.........................|orgmode-inner_subtree|
+            1.3.6.4. around_subtree.......................|orgmode-around_subtree|
+            1.3.6.5. inner_heading_from_root.....|orgmode-inner_heading_from_root|
+            1.3.6.6. around_heading_from_root...|orgmode-around_heading_from_root|
+            1.3.6.7. inner_subtree_from_root.....|orgmode-inner_subtree_from_root|
+            1.3.6.8. around_subtree_from_root...|orgmode-around_subtree_from_root|
+        1.3.7. Dot repeat.....................................|orgmode-dot_repeat|
+    1.4. Document Diagnostics.......................|orgmode-document_diagnostics|
+    1.5. Tables...................................................|orgmode-tables|
+    1.6. Hyperlinks...........................................|orgmode-hyperlinks|
+    1.7. Autocompletion...................................|orgmode-autocompletion|
+    1.8. Abbreviations.....................................|orgmode-abbreviations|
+    1.9. Formatting...........................................|orgmode-formatting|
+    1.10. Colors..................................................|orgmode-colors|
+        1.10.1. Highlight Groups........................|orgmode-highlight_groups|
+    1.11. Advanced search................................|orgmode-advanced_search|
+    1.12. Notifications (experimental)......|orgmode-notifications_(experimental)|
+        1.12.1. Cron................................................|orgmode-cron|
+    1.13. Clocking..............................................|orgmode-clocking|
+                1.13.1. Clock in................................|orgmode-clock_in|
+                1.13.2. Clock out..............................|orgmode-clock_out|
+                1.13.3. Clock cancel........................|orgmode-clock_cancel|
+                1.13.4. Clock goto............................|orgmode-clock_goto|
+                1.13.5. Set effort............................|orgmode-set_effort|
+                1.13.6. Clock report table............|orgmode-clock_report_table|
+                1.13.7. Automatic updates of totals.|orgmode-automatic_updates_of_totals|
+                1.13.8. Recalculating totals........|orgmode-recalculating_totals|
+                1.13.9. Statusline function..........|orgmode-statusline_function|
+    1.14. Changelog............................................|orgmode-changelog|
+            1.14.1. 24 October 2021......................|orgmode-24_october_2021|
+            1.14.2. 10 October 2021......................|orgmode-10_october_2021|
 
 ================================================================================
 TABLE OF CONTENT                                        *orgmode-table_of_content*
 
-1.  Settings (#settings)
+1.  Getting started with Orgmode (#getting-started-with-orgmode)
+2.  Settings (#settings)
     1.  Global settings (#global-settings)
-    2.  Agenda settings (#global-settings)
-    3.  Tags settings (#global-settings)
-2.  Mappings (#mappings)
+    2.  Agenda settings (#agenda-settings)
+    3.  Tags settings (#tags-settings)
+3.  Mappings (#mappings)
     1.  Global mappings (#global-mappings)
     2.  Agenda mappings (#agenda-mappings)
     3.  Capture mappings (#capture-mappings)
     4.  Org mappings (#org-mappings)
-    5.  Text objects (#text-objects)
-    6.  Dot repeat (#dot-repeat)
-3.  Document Diagnostics (#document-diagnostics)
-4.  Autocompletion (#autocompletion)
-5.  Abbreviations (#abbreviations)
-6.  Colors (#colors)
-7.  Advanced search (#advanced-search)
-8.  Notifications (experimental) (#notifications-experimental)
-9.  Clocking (#clocking)
-10. Changelog (#changelog)
+    5.  Edit Src mappings (#edit-src)
+    6.  Text objects (#text-objects)
+    7.  Dot repeat (#dot-repeat)
+4.  Document Diagnostics (#document-diagnostics)
+5.  Tables (#tables)
+6.  Hyperlinks (#hyperlinks)
+7.  Autocompletion (#autocompletion)
+8.  Abbreviations (#abbreviations)
+9.  Formatting (#formatting)
+10. Colors (#colors)
+11. Advanced search (#advanced-search)
+12. Notifications (experimental) (#notifications-experimental)
+13. Clocking (#clocking)
+14. Changelog (#changelog)
+
+--------------------------------------------------------------------------------
+GETTING STARTED WITH ORGMODE                *orgmode-getting_started_with_orgmode*
+
+To get a basic idea how Orgmode works, look at this screencast from @dhruvasagar (https://github.com/dhruvasagar)
+that demonstrates how the similar Orgmode clone vim-dotoo (https://github.com/dhruvasagar/vim-dotoo) works.
+
+https://www.youtube.com/watch?v=nsv33iOnH34 (https://www.youtube.com/watch?v=nsv33iOnH34)
 
 --------------------------------------------------------------------------------
 SETTINGS                                                        *orgmode-settings*
@@ -227,7 +257,59 @@ DIAGNOSTICS                                                  *orgmode-diagnostic
 type: `boolean`
 default value: `true`
 Should error diagnostics be shown. If you are using Neovim 0.6.0 or higher, these will be shown via `vim.diagnostic`.
-If you are on 0.5.1 or lower, you need to use `:OrgDiagnostics` command to print the errors in the command line.
+
+WIN_SPLIT_MODE                                            *orgmode-win_split_mode*
+
+type: `string|function|table`
+default value: `horizontal`
+Available options:
+* `horizontal` - Always split horizontally
+* `vertical` - Always split vertically
+* `auto` - Determine between horizontal and vertical split depending on the current window size
+* `float` - Open in float window that has width of 70% of the screen centered
+* `{'float', 0.9}` - Open in float window and provide custom scale (in this case it's 90% of screen size), must be value between `0` and `1`
+
+This option determines how to open agenda and capture window.
+If none of the options above suit your needs, you can provide custom command string (see `:help <mods>`) or custom function:
+Here are few examples:
+
+Open in float window:
+>
+    win_split_mode = function(name)
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      --- Setting buffer name is required
+      vim.api.nvim_buf_set_name(bufnr, name)
+      local fill = 0.8
+      local width = math.floor((vim.o.columns * fill))
+      local height = math.floor((vim.o.lines * fill))
+      local row = math.floor((((vim.o.lines - height) / 2) - 1))
+      local col = math.floor(((vim.o.columns - width) / 2))
+      vim.api.nvim_open_win(bufnr, true, {
+        relative = "editor",
+        width = width,
+        height = height,
+        row = row,
+        col = col,
+        style = "minimal",
+        border = "rounded"
+      })
+    end
+<
+
+Always open in tab:
+>
+    win_split_mode = 'tabnew'
+<
+
+Always open vertically:
+>
+    win_split_mode = 'vsplit'
+<
+
+Always open horizontally with specific height of 20 lines:
+>
+    win_split_mode = '20split'
+<
 
 ORG_TODO_KEYWORD_FACES                            *orgmode-org_todo_keyword_faces*
 
@@ -241,6 +323,7 @@ Available options:
 * underline - `:underline on`
 * italic - `:slant italic`
 
+--------------------------------------------------------------------------------
 Full configuration example with additional todo keywords and their colors:
 >
     require('orgmode').setup({
@@ -320,7 +403,7 @@ default value: `nil`
 Possible values:
 * `native` - Includes whole latex syntax file into the org syntax. It can potentially cause some highlighting issues and slowness.
 * `entities` - Highlight latex only in these situations (see Orgmode latex fragments (https://orgmode.org/manual/LaTeX-fragments.html#LaTeX-fragments)):
-  * between `/begin` and `/end` delimiters
+  * between `\begin` and `\end` delimiters
   * between `$` and `$` delimiters - example: `$a^2=b$`
   * between `$$` and `$$` delimiters - example: `$$ a=+\sqrt{2} $$`
   * between `\[` and `\]` delimiters - example: `\[ a=-\sqrt{2} \]`
@@ -333,6 +416,21 @@ default value: `indent`
 Possible values:
 * `indent` - Use default indentation that follows headlines/checkboxes/previous line indent
 * `noindent` - Disable indentation. All lines start from 1st column
+
+ORG_SRC_WINDOW_SETUP                                *orgmode-org_src_window_setup*
+
+type: `string|function`
+default value: "top 16new"
+If the value is a string, it will be run directly as input to `:h vim.cmd`, otherwise if the value is a function it will be called. Both
+values have the responsibility of opening a buffer (within a window) to show the special edit buffer. The content of the buffer will be
+set automatically, so this option only needs to handle opening an empty buffer.
+
+ORG_EDIT_SRC_CONTENT_INDENTATION        *orgmode-org_edit_src_content_indentation*
+
+type: `number`
+default value: 0
+The indent value for content within `SRC` block types beyond the existing indent of the block itself. Only applied when exiting from
+an `org_edit_special` action on a `SRC` block.
 
 ORG_CUSTOM_EXPORTS                                    *orgmode-org_custom_exports*
 
@@ -397,6 +495,22 @@ Determine if blank line should be prepended when:
 * Adding heading via `org_meta_return` and `org_insert_*` mappings
 * Adding a list item via `org_meta_return`
 
+CALENDAR_WEEK_START_DAY                          *orgmode-calendar_week_start_day*
+
+type: `number`
+default value: `1`
+Available options:
+* `0` - start week on Sunday
+* `1` - start week on Monday
+
+Determine on which day the week will start in calendar modal (ex: changing the date under cursor (#org_change_date))
+
+EMACS_CONFIG                                                *orgmode-emacs_config*
+
+type: `table`
+default value: `{ executable_path = 'emacs', config_path='$HOME/.emacs.d/init.el' }`
+Set configuration for your emacs. This is useful for having the emacs export properly pickup your emacs config and plugins.
+
 AGENDA SETTINGS                                          *orgmode-agenda_settings*
 
 ORG_DEADLINE_WARNING_DAYS                      *orgmode-org_deadline_warning_days*
@@ -436,15 +550,15 @@ Example:
   If `org_agenda_start_on_weekday` is `false`, and `org_agenda_start_day` is `-2d`,
   agenda will always show current week from today - 2 days
 
-ORG_AGENDA_TEMPLATES                                *orgmode-org_agenda_templates*
+ORG_CAPTURE_TEMPLATES                              *orgmode-org_capture_templates*
 
 type: `table<string, table>`
 default value: `{ t = { description = 'Task', template = '* TODO %?\n  %u' } }`
 Templates for capture/refile prompt.
 Variables:
-  - `%f`: Prints the file of the buffer capture was called from
-  - `%F`: Like `%f` but inserts the full path
-  - `%n`: Inserts the current `$USER`
+  * `%f`: Prints the file of the buffer capture was called from
+  * `%F`: Like `%f` but inserts the full path
+  * `%n`: Inserts the current `$USER`
   * `%t`: Prints current date (Example: `<2021-06-10 Thu>`)
   * `%T`: Prints current date and time (Example: `<2021-06-10 Thu 12:30>`)
   * `%u`: Prints current date in inactive format (Example: `[2021-06-10 Thu]`)
@@ -454,13 +568,44 @@ Variables:
   * `%x`: Insert content of the clipboard via the "+" register (see :help clipboard)
   * `%?`: Default cursor position when template is opened
   * `%^{PROMPT|DEFAULT|COMPLETION...}`: Prompt for input, if completion is provided an :h inputlist will be used
-  - `%(EXP)`: Runs the given lua code and inserts the result
+  * `%(EXP)`: Runs the given lua code and inserts the result
 
 Example:
-  `{ T = { description = 'Todo', template = '* TODO %?\n %u', target = '~/org/todo.org' } }`
+>
+      { T = {
+        description = 'Todo',
+        template = '* TODO %?\n %u',
+        target = '~/org/todo.org'
+      } }
+<
 
 Journal example:
-  `{ j = { description = 'Journal', template = '\n*** %<%Y-%m-%d> %<%A>\n**** %U\n\n%?', target = '~/sync/org/journal.org' } }`
+>
+      { j = {
+        description = 'Journal',
+        template = '\n*** %<%Y-%m-%d> %<%A>\n**** %U\n\n%?',
+        target = '~/sync/org/journal.org'
+      } }
+<
+
+Nested key example:
+>
+      {
+        e =  'Event',
+        er = {
+          description = 'recurring',
+          template = '** %?\n %T',
+          target = '~/org/calendar.org',
+          headline = 'recurring'
+        },
+        eo = {
+          description = 'one-time',
+          template = '** %?\n %T',
+          target = '~/org/calendar.org',
+          headline = 'one-time'
+        }
+      }
+<
 
 ORG_AGENDA_MIN_HEIGHT                              *orgmode-org_agenda_min_height*
 
@@ -520,6 +665,16 @@ Example value: `{'agenda-archives'}`
 
 TAGS SETTINGS                                              *orgmode-tags_settings*
 
+ORG_TAGS_COLUMN                                          *orgmode-org_tags_column*
+
+type: `number`
+default value: `80`
+The column to which tags should be indented in a headline.
+If this number is positive, it specifies the column.
+If it is negative, it means that the tags should be flushright to that column.
+For example, -80 works well for a normal 80 character screen.
+When 0, place tags directly after headline text, with only one space in between.
+
 ORG_USE_TAG_INHERITANCE                          *orgmode-org_use_tag_inheritance*
 
 type: `boolean`
@@ -547,12 +702,12 @@ Using the example above, setting this variable to `{'MYTAG'}`, second and third 
 MAPPINGS                                                        *orgmode-mappings*
 
 Mappings try to mimic some of the Orgmode mappings, but since Orgmode uses `CTRL + c` as a modifier most of the time, we have to take a different route.
-When possible, instead of `CTRL + C`, prefix `<Leader>o` is used.
+When possible, instead of `CTRL + C`, prefix `<Leader>o` is used. This is customizable via the `mappings.prefix` setting.
 
 To disable all mappings, just pass `disable_all = true` to mappings settings:
 >
     require('orgmode').setup({
-      org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+      org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
       org_default_notes_file = '~/Dropbox/org/refile.org',
       mappings = {
         disable_all = true
@@ -568,7 +723,7 @@ There are only 2 global mappings that are accessible from everywhere.
 
 ORG_AGENDA                                                    *orgmode-org_agenda*
 
-mapped to:  <Leader>oa
+mapped to:  `<Leader\>oa`
 Opens up agenda prompt.
 
 ORG_CAPTURE                                                  *orgmode-org_capture*
@@ -579,7 +734,7 @@ Opens up capture prompt.
 These live under `mappings.global` and can be overridden like this:
 >
     require('orgmode').setup({
-      org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+      org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
       org_default_notes_file = '~/Dropbox/org/refile.org',
       mappings = {
         global = {
@@ -593,7 +748,7 @@ These live under `mappings.global` and can be overridden like this:
 If you want to use multiple mappings for same thing, pass array of mappings:
 >
     require('orgmode').setup({
-      org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+      org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
       org_default_notes_file = '~/Dropbox/org/refile.org',
       mappings = {
         global = {
@@ -718,6 +873,11 @@ ORG_AGENDA_PRIORITY_DOWN                        *orgmode-org_agenda_priority_dow
 mapped to: `-`
 Decrease the priority of a headline item.
 
+ORG_AGENDA_ARCHIVE                                    *orgmode-org_agenda_archive*
+
+mapped to: `<Leader>o$`
+Archive headline item to archive location.
+
 ORG_AGENDA_TOGGLE_ARCHIVE_TAG              *orgmode-org_agenda_toggle_archive_tag*
 
 mapped to: `<Leader>oA`
@@ -757,7 +917,7 @@ Show help popup with mappings
 These mappings live under `mappings.agenda`, and can be changed like this:
 >
     require('orgmode').setup({
-      org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+      org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
       org_default_notes_file = '~/Dropbox/org/refile.org',
       mappings = {
         agenda = {
@@ -796,7 +956,7 @@ Show help popup with mappings
 These mappings live under `mappings.capture`, and can be changed like this:
 >
     require('orgmode').setup({
-      org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+      org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
       org_default_notes_file = '~/Dropbox/org/refile.org',
       mappings = {
         capture = {
@@ -815,7 +975,7 @@ Mappings for `org` files.
 ORG_REFILE                                                    *orgmode-org_refile*
 
 mapped to: `<Leader>or`
-Refile current headline to destination
+Refile current headline, including its subtree, to a destination org-file. This file must be one of the files specified for the `org_agenda_files` setting. A target headline in the destination file can be specified with `destination.org/<headline>`. If there are multiple headlines with the same name in the destination file, the first occurence will be used.
 
 ORG_TIMESTAMP_UP                                        *orgmode-org_timestamp_up*
 
@@ -881,18 +1041,22 @@ ORG_TOGGLE_CHECKBOX                                  *orgmode-org_toggle_checkbo
 mapped to: `<C-Space>`
 Toggle current line checkbox state
 
+ORG_TOGGLE_HEADING                                    *orgmode-org_toggle_heading*
+
+mapped to: `<Leader>o*`
+Toggle current line to headline and vice versa. Checkboxes will turn into TODO headlines.
+
 ORG_OPEN_AT_POINT                                      *orgmode-org_open_at_point*
 
 mapped to: `<Leader>oo`
-Open hyperlink or date under cursor.
-Hyperlink types supported:
-* URL (http://, https://)
-* File (starts with `file:`. Example: `file:/home/user/.config/nvim/init.lua`) Optionally, a line number can be specified
-using the '+' character. Example: `file:/home/user/.config/nvim/init.lua +10`
-* Headline title target (starts with `*`)
-* Headline with `CUSTOM_ID` property (starts with `#`)
-* Fallback: If file path, opens the file, otherwise, tries to find the Headline title.
-When date is under the cursor, open the agenda for that day.
+Open hyperlink or date under cursor. When date is under the cursor, open the agenda for that day.
+
+ORG_EDIT_SPECIAL                                        *orgmode-org_edit_special*
+
+mapped to: `<Leader>o'`
+Open a source block for editing in a temporary buffer of the associated `filetype`.
+This is useful for editing text with language servers attached, etc. When the buffer is closed, the text of the underlying source block in the original Org file is updated.
+Note that if the Org file that the source block comes from is edited before the special edit buffer is closed, the edits will not be applied. The special edit buffer contents can be recovered from :messages output
 
 ORG_CYCLE                                                      *orgmode-org_cycle*
 
@@ -1059,7 +1223,7 @@ Show help popup with mappings
 These mappings live under `mappings.org`, and can be changed like this:
 >
     require('orgmode').setup({
-      org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+      org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
       org_default_notes_file = '~/Dropbox/org/refile.org',
       mappings = {
         org = {
@@ -1069,6 +1233,25 @@ These mappings live under `mappings.org`, and can be changed like this:
       }
     })
 <
+
+EDIT SRC                                                        *orgmode-edit_src*
+
+Mappings applied when editing a `SRC` block content via `org_edit_special`.
+
+ORG_EDIT_SRC_ABORT                                    *orgmode-org_edit_src_abort*
+
+mapped to: `<Leader>ok`
+Abort changes made to temporary buffer created from the content of a `SRC` block, see above.
+
+ORG_EDIT_SRC_SAVE                                      *orgmode-org_edit_src_save*
+
+mapped to: `<Leader>ow`
+Apply changes from the special buffer to the source Org buffer
+
+ORG_EDIT_SRC_SHOW_HELP                            *orgmode-org_edit_src_show_help*
+
+mapped to: `g?`
+Show help within the temporary buffer used to edit the content of a `SRC` block.
 
 TEXT OBJECTS                                                *orgmode-text_objects*
 
@@ -1122,7 +1305,7 @@ select around everything from first level subtree to the current subtree.
 These mappings live under `mappings.text_objects`, and can be changed like this:
 >
     require('orgmode').setup({
-      org_agenda_file = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
+      org_agenda_files = {'~/Dropbox/org/*', '~/my-orgs/**/*'},
       org_default_notes_file = '~/Dropbox/org/refile.org',
       mappings = {
         text_objects = {
@@ -1140,10 +1323,43 @@ To make all mappings dot repeatable, install vim-repeat (https://github.com/tpop
 DOCUMENT DIAGNOSTICS                                *orgmode-document_diagnostics*
 
 Since tree-sitter parser is being used to parse the file, if there are some syntax errors,
-it can potentially fail to parse specific parts of document when needed. If you are using Neovim v0.6.0 which has
-`vim.diagnostic` available (see `:help vim.diagnostic`), you will get diagnostic errors reported inline.
-If you are using v0.5.1 or lower, you need to use `:OrgDiagnostics` command to view the error details.
-When file is saved, if there are any errors, you will be notified in the command line (0.5.1 and lower).
+it can potentially fail to parse specific parts of document when needed.
+
+--------------------------------------------------------------------------------
+TABLES                                                            *orgmode-tables*
+
+Tables can be formatted via built in `formatexpr` (see `:help gq`)
+
+For example, having this content:
+>
+    * TODO My headline
+      DEADLINE: <2022-05-22 Sun>
+      |Header 1|Header 2
+      |-
+      | col 1| col 2|
+<
+
+And going to line `4` and pressing `gqgq`, it will format it to this:
+>
+    * TODO My headline
+      DEADLINE: <2022-05-22 Sun>
+      | Header 1 | Header 2 |
+      |----------+----------|
+      | col 1    | col 2    |
+<
+
+--------------------------------------------------------------------------------
+HYPERLINKS                                                    *orgmode-hyperlinks*
+
+The format for links is either `[[LINK]]` or `[[LINK][DESCRIPTION]]`. If a description is provided, the actual link is concealed in favor of the description.
+
+Hyperlink types supported:
+* URL (http://, https://)
+* File (starts with `file:`. Example: `file:/home/user/.config/nvim/init.lua`) Optionally, a line number can be specified
+using the '+' character (Example: `file:/home/user/.config/nvim/init.lua +10`) or a headline within the specified file using '::' (Example: `file:/home/user/org/file.org::*Specific Headline`)
+* Headline title target within the same file (starts with `*`)
+* Headline with `CUSTOM_ID` property within the same file (starts with `#`)
+* Fallback: If file path, opens the file, otherwise, tries to find the headline title.
 
 --------------------------------------------------------------------------------
 AUTOCOMPLETION                                            *orgmode-autocompletion*
@@ -1210,6 +1426,20 @@ ABBREVIATIONS                                              *orgmode-abbreviation
 *   `:now:` - expands to today's date and current time (example: `<2021-06-29 Tue 15:32>`)
 
 --------------------------------------------------------------------------------
+FORMATTING                                                    *orgmode-formatting*
+
+Formatting is done via `gq` mapping, which uses `formatexpr` under the hood (see `:help formatexpr` for more info).
+For example, to re-format whole document, you can do `gggqG`. `gg` goes to first line in current file, `gq` starts the format motion,
+and `G` goes to last line in file to make it format the whole thing. To format a single line, do `gqgq`, or to format selection,
+select the lines you want to format and just do `gq`.
+
+Currently, these things are formatted:
+
+*   Tags are aligned according to the `org_tags_column` setting
+*   Tables are formatted (see Tables (#Tables) for more info)
+*   Clock entries total time is recalculated (see Recalculating totals (#recalculating-totals) in Clocking (#Clocking) section)
+
+--------------------------------------------------------------------------------
 COLORS                                                            *orgmode-colors*
 
 Colors used for todo keywords and agenda states (deadline, schedule ok, schedule warning)
@@ -1239,34 +1469,33 @@ HIGHLIGHT GROUPS                                        *orgmode-highlight_group
 
 *   The following highlight groups are based on Treesitter query results, hence when setting up Orgmode these
     highlights must be enabled by removing `disable = {'org'}` from the default recommended Treesitter configuration.
-
-`OrgTSTimestampActive`: An active timestamp
-`OrgTSTimestampInactive`: An inactive timestamp
-`OrgTSBullet`: A normal bullet under a header item
-`OrgTSPropertyDrawer`: Property drawer start/end delimiters
-`OrgTSDrawer`: Drawer start/end delimiters
-`OrgTSTag`: A tag for a headline item, shown on the righthand side like `:foo:`
-`OrgTSPlan`: `SCHEDULED`, `DEADLINE`, `CLOSED`, etc. keywords
-`OrgTSComment`: A comment block
-`OrgTSDirective`: Blocks starting with `#+`
-`OrgTSCheckbox`: The default checkbox highlight, overridden if any of the below groups are specified
-`OrgTSCheckboxChecked`: A checkbox checked with either `[x]` or `[X]`
-`OrgTSCheckboxHalfChecked`: A checkbox checked with `[-]`
-`OrgTSCheckboxUnchecked`: A empty checkbox
-`OrgTSHeadlineLevel1`: Headline at level 1
-`OrgTSHeadlineLevel2`: Headline at level 2
-`OrgTSHeadlineLevel3`: Headline at level 3
-`OrgTSHeadlineLevel4`: Headline at level 4
-`OrgTSHeadlineLevel5`: Headline at level 5
-`OrgTSHeadlineLevel6`: Headline at level 6
-`OrgTSHeadlineLevel7`: Headline at level 7
-`OrgTSHeadlineLevel8`: Headline at level 8
-
+    *   `OrgTSTimestampActive`: An active timestamp
+    *   `OrgTSTimestampInactive`: An inactive timestamp
+    *   `OrgTSBullet`: A normal bullet under a header item
+    *   `OrgTSPropertyDrawer`: Property drawer start/end delimiters
+    *   `OrgTSDrawer`: Drawer start/end delimiters
+    *   `OrgTSTag`: A tag for a headline item, shown on the righthand side like `:foo:`
+    *   `OrgTSPlan`: `SCHEDULED`, `DEADLINE`, `CLOSED`, etc. keywords
+    *   `OrgTSComment`: A comment block
+    *   `OrgTSLatex`: LaTeX block
+    *   `OrgTSDirective`: Blocks starting with `#+`
+    *   `OrgTSCheckbox`: The default checkbox highlight, overridden if any of the below groups are specified
+    *   `OrgTSCheckboxChecked`: A checkbox checked with either `[x]` or `[X]`
+    *   `OrgTSCheckboxHalfChecked`: A checkbox checked with `[-]`
+    *   `OrgTSCheckboxUnchecked`: A empty checkbox
+    *   `OrgTSHeadlineLevel1`: Headline at level 1
+    *   `OrgTSHeadlineLevel2`: Headline at level 2
+    *   `OrgTSHeadlineLevel3`: Headline at level 3
+    *   `OrgTSHeadlineLevel4`: Headline at level 4
+    *   `OrgTSHeadlineLevel5`: Headline at level 5
+    *   `OrgTSHeadlineLevel6`: Headline at level 6
+    *   `OrgTSHeadlineLevel7`: Headline at level 7
+    *   `OrgTSHeadlineLevel8`: Headline at level 8
 *   The following use vanilla Vim syntax matching, and will work without Treesitter highlighting enabled.
-
-`OrgAgendaDeadline`: A item deadline in the agenda view
-`OrgAgendaScheduled`: A scheduled item in the agenda view
-`OrgAgendaScheduledPast`: A item past its scheduled date in the agenda view
+    *   `OrgEditSrcHighlight`: The highlight for the source content in an Org buffer while it is being edited in an edit special buffer
+    *   `OrgAgendaDeadline`: A item deadline in the agenda view
+    *   `OrgAgendaScheduled`: A scheduled item in the agenda view
+    *   `OrgAgendaScheduledPast`: A item past its scheduled date in the agenda view
 
 --------------------------------------------------------------------------------
 ADVANCED SEARCH                                          *orgmode-advanced_search*
@@ -1447,7 +1676,7 @@ Also, agenda/todo/search view highlights item that is clocked in.
 
 CLOCK OUT                                                      *orgmode-clock_out*
 
-Org file mapping: `<leader>oxi`
+Org file mapping: `<leader>oxo`
 Agenda view mapping: `O`
 Clock out the entry and update the `:LOGBOOK:` drawer, and also add a total tracked time.
 Note that in agenda view pressing `O` anywhere clocks the currently active entry, while in org file cursor must be in the headline subtree.
@@ -1498,6 +1727,8 @@ Show the currently clocked in headline (if any), with total clocked time / effor
 
 --------------------------------------------------------------------------------
 CHANGELOG                                                      *orgmode-changelog*
+
+To track breaking changes, subscribe to Notice of breaking changes (https://github.com/nvim-orgmode/orgmode/issues/217) issue where those are announced.
 
 24 OCTOBER 2021                                          *orgmode-24_october_2021*
 

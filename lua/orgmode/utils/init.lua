@@ -1,4 +1,5 @@
 local ts = require('vim.treesitter.query')
+local ts_utils = require('nvim-treesitter.ts_utils')
 local Promise = require('orgmode.utils.promise')
 local uv = vim.loop
 local utils = {}
@@ -7,7 +8,7 @@ local query_cache = {}
 
 ---@param file string
 ---@param callback function
----@param as_string boolean
+---@param as_string? boolean
 function utils.readfile(file, callback, as_string)
   uv.fs_open(file, 'r', 438, function(err1, fd)
     if err1 then
@@ -52,22 +53,22 @@ function utils.open(target)
 end
 
 ---@param msg string
----@param additional_msg table
----@param store_in_history boolean
+---@param additional_msg? table
+---@param store_in_history? boolean
 function utils.echo_warning(msg, additional_msg, store_in_history)
   return utils._echo(msg, 'WarningMsg', additional_msg, store_in_history)
 end
 
 ---@param msg string
----@param additional_msg table
----@param store_in_history boolean
+---@param additional_msg? table
+---@param store_in_history? boolean
 function utils.echo_error(msg, additional_msg, store_in_history)
   return utils._echo(msg, 'ErrorMsg', additional_msg, store_in_history)
 end
 
 ---@param msg string
----@param additional_msg table
----@param store_in_history boolean
+---@param additional_msg? table
+---@param store_in_history? boolean
 function utils.echo_info(msg, additional_msg, store_in_history)
   return utils._echo(msg, nil, additional_msg, store_in_history)
 end
@@ -131,7 +132,7 @@ end
 --- Concat one table at the end of another table
 ---@param first table
 ---@param second table
----@param unique boolean
+---@param unique? boolean
 ---@return table
 function utils.concat(first, second, unique)
   for _, v in ipairs(second) do
@@ -143,7 +144,7 @@ function utils.concat(first, second, unique)
 end
 
 function utils.menu(title, items, prompt)
-  local content = { title .. ':' }
+  local content = { title .. '\\n' .. string.rep('-', #title) }
   local valid_keys = {}
   for _, item in ipairs(items) do
     if item.separator then
@@ -163,33 +164,6 @@ function utils.menu(title, items, prompt)
     return
   end
   return entry.action()
-end
-
-function utils.keymap(mode, lhs, rhs, opts)
-  return vim.api.nvim_set_keymap(
-    mode,
-    lhs,
-    rhs,
-    vim.tbl_extend('keep', opts or {}, {
-      nowait = true,
-      silent = true,
-      noremap = true,
-    })
-  )
-end
-
-function utils.buf_keymap(buf, mode, lhs, rhs, opts)
-  return vim.api.nvim_buf_set_keymap(
-    buf,
-    mode,
-    lhs,
-    rhs,
-    vim.tbl_extend('keep', opts or {}, {
-      nowait = true,
-      silent = true,
-      noremap = true,
-    })
-  )
 end
 
 function utils.esc(cmd)
@@ -324,8 +298,13 @@ end
 ---@param node table
 ---@param type string
 ---@return table
-function utils.get_closest_parent_of_type(node, type)
-  local parent = node:parent()
+function utils.get_closest_parent_of_type(node, type, accept_at_cursor)
+  local parent = node
+
+  if not accept_at_cursor then
+    parent = node:parent()
+  end
+
   while parent do
     if parent:type() == type then
       return parent
@@ -367,7 +346,7 @@ end
 
 ---@param arg_lead string
 ---@param list string[]
----@param split_chars string[]
+---@param split_chars? string[]
 ---@return string[]
 function utils.prompt_autocomplete(arg_lead, list, split_chars)
   split_chars = split_chars or { '+', '-', ':', '&', '|' }
@@ -425,6 +404,161 @@ function utils.promisify(fn)
     return Promise.resolve(fn)
   end
   return fn
+end
+
+---@param file File
+---@param parent_node userdata
+---@param children_names string[]
+---@return table
+function utils.get_named_children_nodes(file, parent_node, children_names)
+  local child_node_info = {}
+
+  if children_names then
+    -- Only grab information for specific named children
+    for _, child_name in ipairs(children_names) do
+      children_names[child_name] = false
+    end
+  end
+
+  vim.tbl_map(function(node)
+    if not children_names or children_names[node:type()] ~= nil then
+      local text
+      local text_list = utils.get_node_text(node, file.file_content)
+
+      if #text_list == 0 then
+        text = ''
+      else
+        text = text_list[1]
+      end
+
+      child_node_info[node:type()] = {
+        node = node,
+        text = text,
+        text_list = text_list,
+      }
+    end
+  end, ts_utils.get_named_children(parent_node))
+
+  return child_node_info
+end
+
+---@param file File
+---@param cursor string[]
+---@param accept_at_cursor boolean
+---@return nil|table
+function utils.get_nearest_block_node(file, cursor, accept_at_cursor)
+  local current_node = file:get_node_at_cursor(cursor)
+  local block_node = utils.get_closest_parent_of_type(current_node, 'block', accept_at_cursor)
+  if not block_node then
+    return
+  end
+
+  -- Block might not have contents yet, which is fine
+  local children_nodes = file:get_ts_matches(
+    '(block name: (expr) @name parameter: (expr) @parameters contents: (contents)? @contents)',
+    block_node
+  )[1]
+  if not children_nodes or not children_nodes.name or not children_nodes.parameters then
+    return
+  end
+
+  return {
+    node = block_node,
+    children = children_nodes,
+  }
+end
+
+function utils.current_file_path()
+  return vim.api.nvim_buf_get_name(0)
+end
+
+---@param winnr? number
+function utils.winwidth(winnr)
+  winnr = winnr or 0
+  local winwidth = vim.api.nvim_win_get_width(winnr)
+  local window_numbers = vim.api.nvim_win_get_option(winnr, 'number')
+  local window_relnumbers = vim.api.nvim_win_get_option(winnr, 'relativenumber')
+  if window_numbers or window_relnumbers then
+    winwidth = winwidth - vim.wo.numberwidth
+  end
+  return winwidth
+end
+
+---@param name string
+---@param height number
+---@param split_mode string|function|table
+function utils.open_window(name, height, split_mode)
+  local cmd_by_split_mode = {
+    horizontal = string.format('%dsplit %s', height, name),
+    vertical = string.format('vsplit %s', name),
+  }
+
+  if cmd_by_split_mode[split_mode] then
+    vim.cmd(cmd_by_split_mode[split_mode])
+    vim.w.org_window_split_mode = split_mode
+    return
+  end
+
+  if split_mode == 'auto' then
+    local winwidth = utils.winwidth()
+    if (winwidth / 2) >= 80 then
+      vim.cmd(cmd_by_split_mode.vertical)
+      vim.w.org_window_split_mode = 'vertical'
+    else
+      vim.cmd(cmd_by_split_mode.horizontal)
+      vim.w.org_window_split_mode = 'horizontal'
+    end
+    return
+  end
+
+  if type(split_mode) == 'function' then
+    return split_mode(name)
+  end
+
+  if split_mode == 'float' then
+    return utils.open_float(name)
+  end
+
+  if type(split_mode) == 'table' and split_mode[1] == 'float' then
+    return utils.open_float(name, split_mode[2])
+  end
+
+  return vim.cmd(string.format('%s %s', split_mode, name))
+end
+
+---@param name string
+---@param scale? number
+function utils.open_float(name, scale)
+  scale = scale or 0.7
+  -- Make sure number is between 0 and 1
+  scale = math.min(math.max(0, scale), 1)
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_name(bufnr, name)
+
+  local width = math.floor((vim.o.columns * scale))
+  local height = math.floor((vim.o.lines * scale))
+  local row = math.floor((((vim.o.lines - height) / 2) - 1))
+  local col = math.floor(((vim.o.columns - width) / 2))
+
+  vim.api.nvim_open_win(bufnr, true, {
+    relative = 'editor',
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    style = 'minimal',
+    border = 'rounded',
+  })
+end
+
+---@param str string
+---@param amount number
+function utils.pad_right(str, amount)
+  local spaces = math.max(0, amount - vim.api.nvim_strwidth(str))
+  if spaces == 0 then
+    return str
+  end
+  return string.format('%s%s', str, string.rep(' ', spaces))
 end
 
 return utils

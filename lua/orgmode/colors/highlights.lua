@@ -18,8 +18,6 @@ function M.link_ts_highlights()
     OrgTSHeadlineLevel8 = 'OrgHeadlineLevel8',
     OrgTSBullet = 'Identifier',
     OrgTSCheckbox = 'PreProc',
-    orgTSSubscript = 'Comment',
-    orgTSSuperscript = 'Comment',
     OrgTSCheckboxHalfChecked = 'OrgTSCheckbox',
     OrgTSCheckboxUnchecked = 'OrgTSCheckbox',
     OrgTSCheckboxChecked = 'OrgTSCheckbox',
@@ -29,6 +27,21 @@ function M.link_ts_highlights()
     OrgTSPlan = 'Constant',
     OrgTSComment = 'Comment',
     OrgTSDirective = 'Comment',
+    OrgTSBlock = 'Comment',
+    OrgTSLatex = 'Statement',
+  }
+
+  for src, def in pairs(links) do
+    if vim.fn.has('nvim-0.8') > 0 then
+      vim.cmd(string.format([[hi link @%s %s]], src, src))
+    end
+    vim.cmd(string.format([[hi def link %s %s]], src, def))
+  end
+end
+
+function M.link_highlights()
+  local links = {
+    OrgEditSrcHighlight = 'Visual',
   }
 
   for src, def in pairs(links) do
@@ -68,6 +81,9 @@ function M.define_org_todo_keyword_colors(do_syn_match)
     )
   )
   vim.cmd('hi default link OrgTODO OrgTODO_builtin')
+  if vim.fn.has('nvim-0.8') > 0 then
+    vim.cmd('hi link @OrgTODO OrgTODO')
+  end
   vim.cmd(
     string.format(
       'hi OrgDONE_builtin guifg=%s ctermfg=%s gui=bold cterm=bold',
@@ -76,6 +92,9 @@ function M.define_org_todo_keyword_colors(do_syn_match)
     )
   )
   vim.cmd('hi default link OrgDONE OrgDONE_builtin')
+  if vim.fn.has('nvim-0.8') > 0 then
+    vim.cmd('hi link @OrgDONE OrgDONE')
+  end
   return M.parse_todo_keyword_faces(do_syn_match)
 end
 
@@ -95,7 +114,7 @@ function M.define_org_headline_colors(faces)
     if not ts_highlights_enabled then
       vim.cmd([[syn match OrgHideLeadingStars /^\*\{2,\}/me=e-1 contained]])
     end
-    vim.cmd([[hi def link OrgHideLeadingStars org_hide_leading_stars]])
+    vim.cmd([[hi default OrgHideLeadingStars ctermfg=0 guifg=bg]])
     table.insert(contains, 'OrgHideLeadingStars')
   end
   contains = table.concat(contains, ',')
@@ -123,6 +142,8 @@ function M.define_highlights()
   if config:ts_highlights_enabled() then
     M.link_ts_highlights()
   end
+
+  M.link_highlights()
 
   local faces = M.define_org_todo_keyword_colors(true)
   return M.define_org_headline_colors(faces)
@@ -173,7 +194,7 @@ function M.parse_todo_keyword_faces(do_syn_match)
       end
     end
     if not vim.tbl_isempty(hl_opts) then
-      local hl_name = 'OrgKeywordFace' .. name
+      local hl_name = 'OrgKeywordFace' .. name:gsub('%-', '')
       local hl = ''
       for hl_item, hl_values in pairs(hl_opts) do
         hl = hl .. ' ' .. hl_item .. '=' .. table.concat(hl_values, ',')
@@ -182,6 +203,9 @@ function M.parse_todo_keyword_faces(do_syn_match)
         vim.cmd(string.format([[syn match %s "\<%s\>" contained]], hl_name, name))
       end
       vim.cmd(string.format('hi %s %s', hl_name, hl))
+      if vim.fn.has('nvim-0.8') > 0 then
+        vim.cmd(string.format([[hi link @%s %s]], hl_name, hl_name))
+      end
       result[name] = hl_name
     end
   end

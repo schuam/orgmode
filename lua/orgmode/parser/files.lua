@@ -16,7 +16,7 @@ local Files = {
 }
 
 function Files.new()
-  Files.load(Files.on_init)
+  Files.load()
   return Files
 end
 
@@ -84,11 +84,14 @@ end
 ---@return File[]
 function Files.all()
   Files.ensure_loaded()
-  local files = vim.tbl_values(Files.orgfiles)
-  table.sort(files, function(a, b)
-    return a.category < b.category
-  end)
-  return files
+  local valid_files = {}
+  local filenames = config:get_all_files()
+  for _, file in ipairs(filenames) do
+    if Files.orgfiles[file] then
+      table.insert(valid_files, Files.orgfiles[file])
+    end
+  end
+  return valid_files
 end
 
 ---@return string[]
@@ -106,6 +109,11 @@ function Files.get(file)
     Files._set_loaded_file(file, f:refresh())
     return Files.orgfiles[file]
   end
+
+  if vim.bo.filetype == 'org' and vim.fn.filereadable(file) == 0 then
+    return File.from_content(vim.api.nvim_buf_get_lines(0, 0, -1, false))
+  end
+
   return nil
 end
 
@@ -116,7 +124,7 @@ end
 
 ---@return File
 function Files.get_current_file()
-  local name = vim.api.nvim_buf_get_name(0)
+  local name = utils.current_file_path()
   local has_capture_var, is_capture = pcall(vim.api.nvim_buf_get_var, 0, 'org_capture')
   if has_capture_var and is_capture then
     return File.from_content(vim.api.nvim_buf_get_lines(0, 0, -1, false))
@@ -126,10 +134,10 @@ end
 
 ---@param title string
 ---@return Section[]
-function Files.find_headlines_by_title(title)
+function Files.find_headlines_by_title(title, exact)
   local headlines = {}
   for _, orgfile in ipairs(Files.all()) do
-    for _, headline in ipairs(orgfile:find_headlines_by_title(title)) do
+    for _, headline in ipairs(orgfile:find_headlines_by_title(title, exact)) do
       table.insert(headlines, headline)
     end
   end
@@ -157,7 +165,7 @@ function Files.update_file(filename, action)
   if not file then
     return Promise.resolve()
   end
-  local is_same_file = filename == vim.api.nvim_buf_get_name(0)
+  local is_same_file = filename == utils.current_file_path()
   local cur_win = vim.api.nvim_get_current_win()
   if is_same_file then
     return utils.promisify(action(file)):next(function(result)
@@ -200,19 +208,16 @@ function Files.find_headlines_matching_search_term(term, no_escape, search_extra
   return headlines
 end
 
----@param id number
+---@param id? number
 ---@return Section
 function Files.get_closest_headline(id)
   local current_file = Files.get_current_file()
   local msg = 'Make sure there are no errors in the document'
-  if not vim.diagnostic then
-    msg = string.format('%s by running :OrgDiagnostics command', msg)
-  end
   if not current_file then
     error({ message = string.format('Failed to parse current file. %s.', msg) })
   end
   local headline = current_file:get_closest_headline(id)
-  if not headline then
+  if not headline and current_file:has_errors() then
     error({ message = string.format('Failed to parse current headline. %s.', msg) })
   end
   return headline
@@ -264,14 +269,6 @@ function Files.get_clock_report(from, to)
   end
 
   return report
-end
-
-function Files.on_init()
-  if vim.bo.filetype == 'org' then
-    vim.schedule(function()
-      vim.cmd([[setlocal foldexpr=OrgmodeFoldExpr()]])
-    end)
-  end
 end
 
 function Files._build_tags()
