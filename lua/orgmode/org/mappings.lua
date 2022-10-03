@@ -425,17 +425,11 @@ function OrgMappings:_todo_change_state(direction)
 
   self:_change_todo_state('reset')
 
-  local data = item:add_properties({ LAST_REPEAT = '[' .. Date.now():to_string() .. ']' })
-  if data.is_new then
-    vim.fn.append(data.end_line, data.indent .. state_change)
-    return dispatchEvent()
-  end
   item = Files.get_closest_headline()
 
   if item.properties.valid then
     vim.fn.append(item.properties.range.end_line, data.indent .. state_change)
   end
-  dispatchEvent()
 end
 
 function OrgMappings:do_promote(whole_subtree)
